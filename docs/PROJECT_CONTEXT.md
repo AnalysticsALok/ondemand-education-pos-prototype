@@ -1,0 +1,790 @@
+# Project Overview
+
+## Purpose
+
+This project is a high-fidelity clickable prototype for an Education POS system used by branch staff at OnDemand Thailand. It is intended for stakeholder review before product development begins.
+
+The prototype is not a backend implementation and not an MVP. It exists to communicate user journey, information architecture, UX decisions, product thinking, and enterprise-grade interface behavior.
+
+## Goals
+
+- Help branch staff sell educational products quickly.
+- Reduce cashier mistakes during high-volume transaction work.
+- Support mixed-product transactions across digital courses, physical books, e-books, and live classes.
+- Keep the interface easy to learn for new staff.
+- Demonstrate realistic workflows with realistic mock data.
+- Prioritize enterprise usability over visual decoration.
+
+## Users
+
+Primary users are OnDemand Thailand branch staff.
+
+These users may perform 200-500 transactions per day, so the interface must favor speed, predictable workflows, low typing burden, and clear error prevention over visual flourish.
+
+Secondary stakeholders include branch managers, product owners, operations teams, and development teams reviewing the proposed workflow before build.
+
+## Business Rules
+
+- There are only two ways to begin a sale:
+  - Existing Student
+  - New Student / Walk-in
+- Do not create a Redeem Code menu.
+- New students receive an SMS activation or redeem code after payment.
+- Phone number is mandatory for New Student / Walk-in sales.
+- Existing students already own a student account.
+- Parents may purchase for children by providing the child Student ID.
+- Existing student search supports:
+  - Student ID
+  - Student Name
+  - Phone Number
+- No barcode scanning is included.
+- The system is branch-staff only and not customer-facing.
+- Mixed transactions may include digital courses, physical books, e-books, and live classes.
+- Void requires manager approval, reason selection, and explicit confirmation.
+
+# Current Features
+
+- Next.js clickable prototype scaffold.
+- Local development server support.
+- Home screen with current branch, staff name, current time, cart count, suspended sales badge, pending payments badge, suspended sales shortcut, pending payments shortcut, and recent transaction shortcut.
+- Header branch selector remembers current branch during the session.
+- Two primary start-sale actions:
+  - Existing Student
+  - New Student / Walk-in
+- Existing Student search by Student ID, student name, and phone number.
+- Mock student search results.
+- Student Profile screen showing:
+  - Student name
+  - Student ID
+  - Grade
+  - Phone number
+  - School
+  - Parent name
+  - Current courses
+  - Suspended Sale Found card when applicable
+  - Active Digital Courses
+  - Purchased Books
+  - E-books
+  - Live Classes
+  - Purchase History
+  - Student Timeline
+  - Student Alerts
+  - Eligible Promotions panel
+  - Recent activity
+- New Student / Walk-in form with:
+  - Required student name
+  - Required phone number
+  - Required grade
+  - Optional parent name
+  - Optional parent phone
+  - Optional school
+  - Optional email
+- Thai mobile number validation for new student phone numbers.
+- Learning Catalog screen with active student context.
+- Catalog default state showing Best Selling Courses.
+- Catalog filters for:
+  - Favorites
+  - Recently Viewed
+  - Best Selling
+  - Recently Sold
+  - Digital Course
+  - Book
+  - E-book
+  - Live Class
+  - Grade 12
+  - Math
+- Catalog search by course name, subject, grade, or SKU.
+- Product cards showing:
+  - Product visual
+  - Product name
+  - Type badge
+  - Price
+  - Availability
+  - Grade
+  - Subject
+  - SKU
+  - Product-specific notes
+- Live class product metadata including seats remaining and start date.
+- Book product metadata showing central delivery requirement.
+- Duplicate purchase warning when an active student already owns a product being added to cart.
+- Shopping cart supporting mixed products.
+- Cart line display for:
+  - Product
+  - Type
+  - Assigned student
+  - Price
+  - Discount
+  - Quantity
+  - Total
+  - Remove action
+- Cart summary showing:
+  - Subtotal
+  - Discount
+  - Tax
+  - Grand total
+- Quantity increase/decrease controls.
+- Delivery notice in cart when physical books are present.
+- Eligible Promotions panel in the cart.
+- Order Summary / Quotation before payment.
+- Existing Student delivery information step when physical books are in the cart.
+- Delivery information includes saved addresses, default address, add new address, edit existing address, delivery method, and estimated delivery.
+- New Student / Walk-in book delivery is deferred to SMS activation and does not ask for delivery info during checkout.
+- Payment screen supporting:
+  - Cash
+  - Credit Card
+  - QR Payment
+- QR Payment can create a Pending Payment transaction.
+- Pending Payments queue for generated QR payments awaiting customer confirmation.
+- Pending Payment actions:
+  - Resume Payment
+  - Complete Payment
+  - Cancel Payment
+- Cash payment received amount and change calculation.
+- Payment status display.
+- Payment success screen showing:
+  - Receipt number
+  - Purchased items
+  - Activation status
+  - SMS activation message for new students
+  - Masked phone number for new student SMS
+  - Print Receipt action
+  - Send SMS Again action
+  - Receipt Preview action
+  - Start New Sale action
+- Receipt Preview screen matching printed receipt layout.
+- Receipt Preview actions:
+  - Print Receipt
+  - Download PDF mock
+  - Email Receipt mock
+  - Send SMS Again
+- Recent Transactions screen with transaction history.
+- Transaction list actions:
+  - View
+  - Reprint
+  - Void
+- Transaction Detail screen.
+- Void Flow screen requiring:
+  - Manager approval code
+  - Void reason
+  - Confirmation checkbox
+- Void reasons:
+  - Wrong Course
+  - Wrong Student
+  - Duplicate
+  - Customer Changed Mind
+  - Payment Issue
+  - Other
+- Persistent cart layout during catalog/product selection.
+- Sticky student banner during catalog and payment for selected or created students.
+- Student banner shows:
+  - Student name
+  - Student ID or draft profile state
+  - Grade or level
+  - Phone number
+  - New Student or Existing Student badge
+  - Available promotion count
+  - Current active course count
+- Favorites catalog section before Best Sellers.
+- Product cards support favorite star toggles.
+- Recently Sold catalog section based on completed transaction data.
+- Suspend Sale action from the cart.
+- Suspend Sale modal with reason and note capture.
+- Suspend reasons:
+  - Waiting for parent confirmation
+  - Customer forgot wallet
+  - Waiting for payment
+  - Customer will come back later
+  - Staff needs manager confirmation
+  - Other
+- Dedicated Suspended Sales page for branch operations.
+- Suspended Sales page includes searchable queue data:
+  - Student name
+  - Student ID or new student state
+  - Phone number
+  - Cart item count
+  - Product summary
+  - Grand total
+  - Suspended date and time
+  - Staff who suspended it
+  - Reason and note
+  - Status: Suspended
+- Suspended Sales actions:
+  - Resume Sale
+  - View Detail
+  - Cancel Suspended Sale
+- Suspended Sale Detail page.
+- Home Suspended Sales shortcut with suspended count badge.
+- Duplicate Sale action from transaction detail.
+- Duplicate Sale copies purchased items into a new cart but requires selecting or creating a student before checkout.
+- Global search bar for students, parent phone number, products, courses, books, live classes, transactions, receipts, and suspended sales.
+- Command-palette style grouped search results.
+- `Cmd K` / `Ctrl K` focuses global search.
+- Smart recommendation panel in the cart based on mock product logic.
+- Manual discount workflow with manager approval.
+- Manual discount reason capture.
+- Manual discount approval metadata shown in transaction detail.
+- System status indicators for:
+  - Branch online
+  - Payment gateway online
+  - SMS service online
+  - Current shift and staff name
+- Transaction history is live prototype state:
+  - Successful payment creates a transaction object.
+  - New transaction appears at the top of Recent Transactions.
+  - Transaction detail shows exact purchased items.
+  - Pending Payment transactions remain available until completed or cancelled.
+  - Delivery address appears in transaction detail for book deliveries.
+  - Student Profile derives purchased items from live transaction history.
+  - Newly purchased items appear in Student Profile purchase sections.
+  - New Student / Walk-in purchase history can be checked from Payment Success using View Profile.
+  - Void changes transaction status to Voided.
+  - Initial mock transactions remain available.
+- Loading states for student search, product loading, global command search, transaction history, pending payments, and payment processing.
+- Meaningful empty states for no suspended sales, no pending payments, no recent transactions, no search results, and no recommendations.
+- Smart defaults during the session:
+  - Last payment method
+  - Last catalog filter
+  - Last selected branch
+  - Recently viewed products
+- Responsive home layout verified with desktop and mobile screenshots.
+- Production build validation.
+- Lint validation.
+- Standard Next.js scripts for Vercel deployment:
+  - `npm run dev`
+  - `npm run build`
+  - `npm run start`
+- No environment variables required.
+
+# User Flows
+
+## Existing Student Sale
+
+1. Staff opens Home.
+2. Staff selects Existing Student.
+3. Staff searches by Student ID, student name, or phone number.
+4. Staff selects a student result.
+5. System opens Student Profile.
+6. Staff reviews profile details if needed.
+7. Staff continues to Learning Catalog.
+8. Staff searches or filters products.
+9. Staff adds products to cart.
+10. Staff reviews cart totals and assigned student.
+11. If physical books are present, staff confirms delivery information.
+12. Staff reviews Order Summary.
+13. Staff continues to Payment.
+14. Staff selects payment method.
+15. Staff completes payment or generates QR Pending Payment.
+16. System shows Payment Success after completed payment.
+17. Staff previews receipt, prints receipt, resends SMS if needed, or starts a new sale.
+
+## New Student / Walk-in Sale
+
+1. Staff opens Home.
+2. Staff selects New Student / Walk-in.
+3. Staff enters required student name, phone number, and grade.
+4. Staff optionally enters parent name, parent phone, school, and email.
+5. System validates phone number.
+6. Staff continues to Learning Catalog.
+7. Staff adds products to cart.
+8. Staff reviews cart totals.
+9. Staff reviews Order Summary.
+10. Staff completes payment or generates QR Pending Payment.
+11. System shows Payment Success with SMS activation message and masked phone number after completed payment.
+12. If books are purchased, student enters delivery address during SMS activation.
+13. Staff previews receipt, prints receipt, resends SMS if needed, or starts a new sale.
+
+## Catalog And Cart Flow
+
+1. Staff lands in the catalog with active student context visible.
+2. Student banner remains sticky above the workspace.
+3. Catalog defaults to Favorites for fastest repeated sales.
+4. Staff can switch to Best Selling Courses or Recently Sold.
+5. Staff can mark or unmark favorites using the star action.
+6. Staff can search by course name, subject, grade, or SKU.
+7. Staff can filter by product type, grade, or subject.
+8. Staff adds one or more products.
+9. If the student already owns a product, system shows a duplicate purchase warning but does not block checkout.
+10. Cart remains visible on the right side throughout product selection.
+11. Cart lines default to the active student.
+12. Staff adjusts quantity or removes items.
+13. Cart shows recommendations and eligible promotions based on selected products.
+14. If physical books are present, cart shows Book Delivery Required notice.
+15. Staff reviews subtotal, discount, tax, and grand total.
+16. Staff continues to delivery, order summary, or payment depending on checkout rules.
+
+## Delivery Information Flow
+
+1. Existing Student cart contains one or more physical books.
+2. Staff selects Review Order.
+3. System inserts Delivery Information before payment.
+4. Staff selects a saved address, default address, edited address, or newly added address.
+5. Selected delivery address appears in Order Summary, Receipt Preview, and Transaction Detail.
+6. New Student / Walk-in sales skip this step because delivery address is collected during SMS activation.
+
+## Order Summary Flow
+
+1. Staff reviews a pre-payment quotation.
+2. Order Summary shows products, discounts, promotions, delivery requirement, and total.
+3. Order Summary is not a receipt.
+4. Staff continues to Payment.
+
+## Suspend And Resume Sale Flow
+
+1. Staff starts a sale and adds products to the cart.
+2. Customer needs to pause the transaction.
+3. Staff selects Suspend in the cart.
+4. System asks staff to select a suspend reason.
+5. Staff may add an operational note for the next staff member.
+6. System stores the active student, cart items, discount approval state, reason, note, timestamp, and staff name.
+7. System returns staff to Home.
+8. Suspended sale appears in the Suspended Sales operational queue.
+9. Staff can search the Suspended Sales queue by student, phone, product, reason, note, or staff.
+10. Staff can view detail, resume sale, or cancel the suspended sale.
+11. When resumed, the system restores selected student, cart items, and discount approval.
+12. The suspended case is removed from the active queue.
+13. Staff continues from the catalog/cart workspace.
+
+## Suspended Sale On Student Profile Flow
+
+1. Staff searches an existing student.
+2. System opens Student Profile.
+3. If that student has a suspended sale, a Suspended Sale Found card appears near the top.
+4. Card shows suspended items, total amount, suspended date/time, and staff name.
+5. Staff can resume the sale directly from the profile.
+
+## Student Purchase Profile Flow
+
+1. Staff opens Student Profile.
+2. System derives purchases from live transaction history.
+3. Profile groups purchased items into Active Digital Courses, Purchased Books, E-books, and Live Classes.
+4. Each purchased item shows product name, type, purchase date, receipt, and status.
+5. Purchase History shows related transactions and transaction status.
+6. After payment, the new transaction appears in Recent Transactions and in the student's profile.
+7. For New Student / Walk-in, Payment Success provides View Profile so SMS activation and purchased items can be checked immediately.
+
+## Duplicate Sale Flow
+
+1. Staff opens Recent Transactions.
+2. Staff opens a transaction detail.
+3. Staff selects Duplicate Sale.
+4. System copies purchased products into a new cart.
+5. System does not copy payment status or receipt number.
+6. System clears the selected student.
+7. Staff must select an existing student or create a new student before checkout.
+8. Staff completes the duplicated sale as a new transaction.
+
+## Global Search Flow
+
+1. Staff uses the global search bar in the header.
+2. Search matches students, parent phone numbers, products, courses, books, live classes, receipt numbers, transactions, and suspended sales.
+3. Selecting a student opens the student profile flow.
+4. Selecting a product adds it to the current sale draft.
+5. Selecting a receipt opens transaction detail.
+6. Selecting a suspended sale opens suspended sale detail.
+
+## Manual Discount Flow
+
+1. Staff opens the cart discount action.
+2. System shows manager approval modal.
+3. Staff enters discount amount, discount reason, and manager PIN.
+4. System applies manual discount after approval.
+5. Payment uses the approved discounted total.
+6. Transaction detail shows the approved discount metadata.
+
+## Payment Flow
+
+1. Staff reviews payment amount and selected items.
+2. Student banner remains visible.
+3. Staff chooses Cash, Credit Card, or QR Payment.
+4. For Cash, staff enters received amount and the system calculates change.
+5. For Credit Card, staff confirms terminal approval.
+6. For QR Payment, system generates a Pending Payment transaction and keeps cart/order details.
+7. Staff monitors Pending Payments.
+8. Pending Payment can be resumed, completed, or cancelled.
+9. Completed payment creates or updates a transaction object and adds it to transaction history.
+10. System shows successful receipt state.
+
+## Pending Payment Flow
+
+1. Staff selects QR Payment.
+2. System generates a QR payment and creates a Pending Payment transaction.
+3. Pending payment appears in the Pending Payments queue.
+4. Staff can resume the payment screen without losing cart/order details.
+5. Staff can mark payment completed.
+6. Staff can cancel payment.
+
+## Receipt Preview Flow
+
+1. Staff completes payment.
+2. Staff selects Receipt Preview.
+3. System shows a printed-receipt style preview.
+4. Staff can print, download PDF mock, email receipt mock, or send SMS again.
+
+## Recent Transaction Flow
+
+1. Staff opens Recent Transactions from Home or the global header.
+2. Staff reviews transaction list.
+3. Staff can view transaction detail.
+4. Staff can reprint receipt.
+5. Staff can duplicate a transaction into a new sale draft.
+6. Staff can begin a void flow for eligible transactions.
+
+## Void Flow
+
+1. Staff opens a transaction detail.
+2. Staff selects Void Transaction.
+3. System shows warning and manager approval requirements.
+4. Staff enters manager approval code.
+5. Staff selects a reason.
+6. Staff confirms the transaction has been reviewed.
+7. System enables Confirm Void.
+8. Staff confirms void.
+9. Transaction status changes to Voided in the prototype state.
+
+# Design Principles
+
+## Color
+
+- Primary brand/action color: `#028FC1`.
+- Use white as the primary surface color.
+- Use subtle gray backgrounds for application canvas and inactive surfaces.
+- Use semantic colors sparingly:
+  - Green for success and paid status.
+  - Amber for warnings, book delivery, low seats, and pending QR state.
+  - Red for voided transactions, destructive actions, and validation errors.
+  - Sky blue for active selections and primary navigation state.
+- Avoid decorative gradients except for compact product thumbnail visuals.
+- Do not let the interface become a one-hue theme; neutral surfaces should dominate.
+
+## Typography
+
+- Use Geist Sans as the primary UI typeface.
+- Prefer clear hierarchy:
+  - Page titles: strong but not oversized.
+  - Card titles: compact and scannable.
+  - Table text: dense and readable.
+  - Metadata: smaller, muted, but still legible.
+- Avoid marketing-style oversized hero text.
+- Do not scale font size with viewport width.
+- Keep letter spacing at normal values except small uppercase labels where useful.
+
+## Spacing
+
+- Use dense but comfortable spacing suitable for repeated staff workflows.
+- Prefer `8px` radius or similar for enterprise cards and controls.
+- Use stable control heights around `44px` for touch-friendly but compact actions.
+- Avoid nested cards except where a repeated item, modal, or framed tool genuinely needs containment.
+- Keep page sections unframed where possible; use cards for operational clusters.
+
+## Component Rules
+
+- Use icons for common actions where recognition is faster than reading.
+- Use text labels when command clarity matters, especially for primary actions.
+- Use badges for status, product type, and warning metadata.
+- Use tabs, filters, or segmented controls for quick category switching.
+- Use form validation inline and close to the field.
+- Keep action buttons predictable:
+  - Primary button for advancing the sale.
+  - Secondary button for navigation or non-destructive support actions.
+  - Red destructive styling only for void or irreversible actions.
+- Tables should be horizontally scrollable on narrow screens instead of compressing into unreadable columns.
+- Persistent cart rails should remain visible during product selection on desktop widths.
+- Mobile should avoid fixed operational bars that cover content.
+- Student context should be sticky during catalog and payment to reduce wrong-student risk.
+
+## UX Principles
+
+- Speed over visual aesthetics.
+- Simplicity over feature breadth.
+- Error prevention over flexibility.
+- Readability over density when the two conflict.
+- Low training time over novelty.
+- Minimize clicks.
+- Minimize typing.
+- Make important actions obvious.
+- Keep sale context visible.
+- Make destructive workflows intentionally slower.
+- Use realistic mock data; do not leave empty placeholders.
+
+# Component Library
+
+## Cards
+
+- Used for operational groups such as start-sale actions, student summaries, product cards, cart, payment panels, and transaction details.
+- Cards use white backgrounds, subtle borders, small radius, and minimal shadow.
+- Cards should not contain unrelated actions.
+
+## Buttons
+
+- `PrimaryButton`: primary sale advancement and completion actions.
+- `SecondaryButton`: navigation, view, print, and support actions.
+- `IconButton`: compact repeated actions such as view, reprint, remove, quantity adjustment, and void.
+- Destructive buttons use red styling and should be gated by confirmation where appropriate.
+
+## Inputs
+
+- Inputs use clear labels, stable height, visible focus rings, and inline validation.
+- Required fields are marked with an asterisk.
+- Search inputs should autofocus where they are the primary task.
+- Phone number validation is required for New Student / Walk-in.
+
+## Tables
+
+- Transaction history uses a dense table-like grid.
+- Suspended Sales uses a dense operational queue table.
+- Narrow screens should allow horizontal scrolling rather than text collision.
+- Status and actions should remain visually distinct.
+
+## Dialogs
+
+- Suspend Sale uses a modal dialog to capture reason and optional note.
+- Manual discount uses a manager approval modal.
+- Dialogs must have a clear primary action, secondary cancel action, and keyboard-accessible close behavior.
+
+## Badges
+
+- Used for product type, transaction status, warnings, result counts, and payment status.
+- Badge colors should be semantic and consistent.
+- Badges should not replace critical explanatory text when the state is high risk.
+
+## Search
+
+- Student search supports Student ID, student name, and phone number.
+- Catalog search supports course name, subject, grade, and SKU.
+- Global search supports students, products, and receipt numbers.
+- Search should reduce typing through quick example chips or filters.
+- Search should be fast and forgiving in the prototype.
+
+## Persistent Cart
+
+- The cart is the current sale rail.
+- The rail stays visible during catalog/product selection.
+- Checkout remains visible in the cart rail.
+- Suspend and manual discount actions live in the rail because they operate on the current sale.
+
+## Student Banner
+
+- Sticky during catalog and payment.
+- Shows identity, status, grade, phone, promotion count, and active course count.
+- New students are clearly marked as draft/new sale profiles.
+
+## Recommendations
+
+- Recommendations appear inside the cart rail.
+- Recommendations use simple mock logic based on selected products.
+- Recommendations must never block checkout.
+
+## Manager Approval Modal
+
+- Used for manual discounts.
+- Captures discount amount, reason, and manager PIN.
+- Approval metadata should be visible later in transaction detail.
+
+# Future Roadmap
+
+## Wishlist
+
+- Scenario switcher for stakeholder demos.
+- Presentation mode with guided flow labels.
+- Keyboard shortcuts for high-frequency actions.
+- Multi-student cart assignment.
+- Split payment or mixed payment methods.
+- Discount and promotion rule preview.
+- Stakeholder demo script and presenter notes.
+- Staff shift/session state.
+- Manager approval modal with realistic approval state.
+- Payment failure and retry flow.
+- SMS resend status and limits.
+
+## Known Improvements
+
+- Break `app/page.tsx` into reusable component files as the prototype grows.
+- Add automated browser flow tests once a project-local Playwright dependency is installed.
+- Expand responsive testing beyond Home.
+- Add better state persistence for demo continuity.
+- Improve catalog filter model for grade and subject combinations.
+- Add stronger accessibility checks for table actions and icon-only controls.
+- Continue reducing dependency audit warnings where possible before production handoff.
+
+## Future Features
+
+- Parent purchasing for multiple children in one transaction.
+- Delivery-service handoff status after activation.
+- Last-seat warning and live class seat hold behavior.
+- Refund flow separate from same-day void.
+- Receipt reprint permissions by role.
+- Correct phone number after sale before SMS resend.
+- Staff role and manager permission model.
+- Branch inventory indicators.
+- Product recommendation bundles.
+- Audit trail for voids and manager approval.
+
+# Decisions
+
+## Use a Persistent Sale Context
+
+Decision: Keep branch, staff, active student, and cart count visible in the global header and sales workspace.
+
+Reason: Branch staff process hundreds of transactions per day. Persistent context reduces orientation cost and helps prevent selling products to the wrong student.
+
+## Keep Only Two Sale Entry Points
+
+Decision: Home shows only Existing Student and New Student / Walk-in as primary sale starters.
+
+Reason: The business rule explicitly allows only two ways to begin a sale. This prevents staff from entering the wrong workflow and avoids a misleading Redeem Code menu.
+
+## Do Not Add Redeem Code Menu
+
+Decision: Redeem code is not represented as a sale entry point.
+
+Reason: New students receive an SMS activation code after payment. Existing students already have accounts. A Redeem Code menu would create an incorrect mental model.
+
+## Default Catalog To Favorites
+
+Decision: The catalog opens to Favorites, with Best Selling, Recently Viewed, and Recently Sold available as quick filters.
+
+Reason: Staff should not scan a large product universe for common sales. Favorites and remembered filters reduce repeated cashier work.
+
+## Make Student Profile A Checkpoint, Not The Main Workspace
+
+Decision: Existing student selection opens Student Profile, then staff continue to Catalog. Catalog keeps a compact active student summary.
+
+Reason: Profile details are useful for verification, but the main transaction work should happen in catalog/cart/payment surfaces.
+
+## Default Cart Assignment To Active Student
+
+Decision: Cart lines are assigned to the active student by default.
+
+Reason: Most transactions are for one student. Default assignment reduces repetitive selection and prevents unassigned products.
+
+## Make Void Intentionally Slower
+
+Decision: Void requires manager approval code, reason selection, and explicit confirmation.
+
+Reason: Most sales workflows should be fast, but voiding is high-risk and needs stronger error prevention and audit clarity.
+
+## Use Dense Enterprise UI Instead Of Marketing UI
+
+Decision: The prototype uses compact cards, tables, subtle borders, and operational copy instead of hero sections or decorative layouts.
+
+Reason: The product is used by branch staff during high-volume transactions, so speed and scanability matter more than visual drama.
+
+## Add Persistent Cart During Catalog
+
+Decision: Keep the current sale visible on the right side during product selection.
+
+Reason: Shopify POS and Square POS both reinforce cart visibility because staff need constant feedback while adding products. For OnDemand, this also helps prevent mixed-product mistakes and wrong totals.
+
+## Add Favorites Before Best Sellers
+
+Decision: Favorites is now the first catalog section, followed by Best Selling and Recently Sold.
+
+Reason: Branch staff repeatedly sell the same courses and books. Favorites reduce search and scanning effort for high-volume counters.
+
+## Add Recently Sold Products
+
+Decision: Recently Sold is derived from non-voided transaction history.
+
+Reason: Products that are selling repeatedly during the day should become quick-add candidates without requiring staff to search.
+
+## Add Suspend And Resume Sale
+
+Decision: Staff can suspend a sale from the cart, capture a reason/note, and restore it from Home, Suspended Sales, Suspended Sale Detail, or Student Profile.
+
+Reason: Branch transactions are interrupted by missing wallets, parent calls, and counter switching. Suspending protects the cart while allowing staff to serve the next student.
+
+## Add Dedicated Suspended Sales Queue
+
+Decision: Suspended sales have a dedicated searchable operations page instead of living only in the cart or Home.
+
+Reason: Branches may have many suspended cases per day. Staff need to quickly answer who suspended the sale, when it was suspended, what was in the cart, why it was suspended, and whether it can be resumed now.
+
+## Show Suspended Sales On Student Profile
+
+Decision: Student Profile shows a Suspended Sale Found card near the top when the selected student has an unfinished sale.
+
+Reason: If a customer returns later and staff search the student, the unfinished sale must be visible before staff accidentally creates a duplicate cart.
+
+## Derive Student Purchases From Transaction History
+
+Decision: Student Profile purchase sections are derived from live transaction history instead of a separate hard-coded purchase list.
+
+Reason: This keeps Recent Transactions and Student Profile consistent when a prototype payment creates a new transaction.
+
+## Add Duplicate Sale
+
+Decision: Duplicate Sale copies purchased items into a new cart but clears the selected student.
+
+Reason: Parents may buy the same package for another child, but payment status, receipt number, and student assignment must never be copied.
+
+## Add Global Search
+
+Decision: Header search covers students, parent phone numbers, products, receipts, transactions, and suspended sales.
+
+Reason: A command-style search reduces navigation for staff who know exactly what they need.
+
+## Add Pending Payment Queue
+
+Decision: QR Payment creates a Pending Payment transaction instead of acting like immediate payment success.
+
+Reason: Real branch staff need to monitor QR payments while preserving cart/order details. Pending Payment can be resumed, completed, or cancelled without losing the sale.
+
+## Add Order Summary Before Payment
+
+Decision: Checkout includes an Order Summary quotation before payment.
+
+Reason: Customers can verify products, discounts, promotions, delivery requirement, and total before money is collected. It reduces cashier correction work after payment.
+
+## Add Existing Student Delivery Step For Books
+
+Decision: Delivery information is collected only for Existing Students when the cart contains physical books.
+
+Reason: Physical books are fulfilled through central delivery. Existing students may already have saved delivery addresses. New Student / Walk-in customers enter delivery address during SMS activation, so branch staff should not collect it during checkout.
+
+## Add Non-Blocking Duplicate Purchase Warning
+
+Decision: Adding an already-owned product shows a warning but does not block checkout.
+
+Reason: Some repeat purchases may be intentional, but staff need awareness to prevent accidental duplicate course sales.
+
+## Add Student Timeline
+
+Decision: Student Profile includes a newest-first timeline of purchases, SMS events, suspended sales, payment events, voids, and live-class events.
+
+Reason: Staff need a quick operational history, not only grouped purchased products.
+
+## Add Receipt Preview
+
+Decision: Payment Success offers a printed-format receipt preview before print/download/email/SMS actions.
+
+Reason: Staff can verify the receipt with the customer before printing or sending, reducing receipt correction and reprint friction.
+
+## Add Manager Approval For Manual Discounts
+
+Decision: Manual discounts require amount, reason, and manager PIN.
+
+Reason: Discounts affect revenue and need audit context, but the workflow should still be faster than leaving the POS.
+
+## Add System Status And Shift Context
+
+Decision: Show branch, payment gateway, SMS service, current shift, and staff status.
+
+Reason: Education POS relies on payment and SMS activation. Staff should know service status without opening a separate admin page.
+
+## Persist New Transactions In Prototype State
+
+Decision: Successful payment creates a live transaction object and adds it to the top of transaction history.
+
+Reason: Stakeholders need to see the full sale lifecycle. Receipt detail, reprint, duplicate, and void should all use the same saved transaction data.
+
+## Prepare For Vercel Deployment
+
+Decision: The project uses standard Next.js scripts and removes unused Cloudflare Worker, D1, Drizzle, and vinext starter artifacts.
+
+Reason: Stakeholder demo deployment should be simple and reliable on Vercel. The prototype is frontend-only and does not need backend/database setup.
+
+## Maintenance Rule
+
+Decision: `PROJECT_CONTEXT.md` must be updated whenever a major feature is added, removed, or materially changed.
+
+Reason: This document is the single source of truth for product vision, current state, UX rules, and decisions. Keeping it current prevents prototype drift.

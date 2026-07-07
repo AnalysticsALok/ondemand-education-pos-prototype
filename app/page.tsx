@@ -1,0 +1,4180 @@
+"use client";
+
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Banknote,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Copy,
+  CreditCard,
+  Download,
+  FileText,
+  History,
+  Home,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageSquareText,
+  Minus,
+  PauseCircle,
+  Plus,
+  Printer,
+  QrCode,
+  ReceiptText,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Signal,
+  ShoppingCart,
+  Smartphone,
+  Star,
+  Tag,
+  Trash2,
+  Truck,
+  User,
+  UserPlus,
+  Wifi,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type Screen =
+  | "home"
+  | "student-search"
+  | "student-profile"
+  | "new-student"
+  | "catalog"
+  | "payment"
+  | "success"
+  | "transactions"
+  | "transaction-detail"
+  | "void-flow"
+  | "suspended-sales"
+  | "suspended-detail"
+  | "pending-payments"
+  | "order-summary"
+  | "delivery-info"
+  | "receipt-preview";
+
+type ProductType = "Digital Course" | "Book" | "E-book" | "Live Class";
+type PaymentMethod = "Cash" | "Credit Card" | "QR Payment";
+type TransactionStatus = "Paid" | "SMS sent" | "Voided" | "Pending Payment" | "Cancelled";
+
+type DeliveryAddress = {
+  id: string;
+  label: string;
+  recipient: string;
+  phone: string;
+  address: string;
+  method: string;
+  estimate: string;
+  isDefault?: boolean;
+};
+
+type Student = {
+  id: string;
+  name: string;
+  grade: string;
+  phone: string;
+  parent: string;
+  parentPhone?: string;
+  school: string;
+  courses: string[];
+  purchases: string[];
+  promotions: string[];
+  alerts: string[];
+  deliveryAddresses: DeliveryAddress[];
+  activity: string[];
+  isNew?: boolean;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  type: ProductType;
+  subject: string;
+  grade: string;
+  sku: string;
+  price: number;
+  availability: string;
+  detail: string;
+  warning?: string;
+  imageTone: string;
+};
+
+type CartLine = {
+  lineId: string;
+  product: Product;
+  quantity: number;
+  discount: number;
+};
+
+type TransactionItem = {
+  productId: string;
+  name: string;
+  type: ProductType;
+  quantity: number;
+  price: number;
+  discount: number;
+};
+
+type DiscountApproval = {
+  amount: number;
+  reason: string;
+  manager: string;
+  approvedAt: string;
+};
+
+type Transaction = {
+  id: string;
+  time: string;
+  student: string;
+  studentId?: string;
+  grade?: string;
+  phone: string;
+  staff: string;
+  method: PaymentMethod;
+  status: TransactionStatus;
+  total: number;
+  items: TransactionItem[];
+  discountApproval?: DiscountApproval;
+  deliveryAddress?: DeliveryAddress | null;
+  promotionNames?: string[];
+};
+
+type SuspendedSale = {
+  id: string;
+  time: string;
+  date: string;
+  student: Student;
+  cart: CartLine[];
+  discountApproval: DiscountApproval | null;
+  staff: string;
+  reason: string;
+  note: string;
+  status: "Suspended";
+};
+
+const staffName = "Arisa K.";
+const branchName = "Siam Branch";
+const currentTime = "6 Jul 2026, 14:28";
+const branchOptions = ["Siam Branch", "Central Ladprao Branch", "Mega Bangna Branch"];
+
+const students: Student[] = [
+  {
+    id: "STU-2401829",
+    name: "Pimchanok Wongsa",
+    grade: "Grade 12",
+    phone: "081-234-8891",
+    parent: "Krit Wongsa",
+    parentPhone: "089-111-7821",
+    school: "Triam Udom Suksa",
+    courses: ["A-Level Math Intensive", "Physics Entrance Booster"],
+    purchases: ["RC-260706-0188", "RC-260618-0120", "RC-260510-0084"],
+    promotions: ["Summer Bundle", "Student Member Discount", "Buy Course + Book Promotion"],
+    alerts: ["Suspended sale exists", "Upcoming Live Class", "Course expires soon"],
+    deliveryAddresses: [
+      {
+        id: "ADDR-001",
+        label: "Default home",
+        recipient: "Pimchanok Wongsa",
+        phone: "081-234-8891",
+        address: "88/12 Rama I Road, Pathum Wan, Bangkok 10330",
+        method: "Central delivery service",
+        estimate: "2-4 business days",
+        isDefault: true,
+      },
+      {
+        id: "ADDR-002",
+        label: "Parent office",
+        recipient: "Krit Wongsa",
+        phone: "089-111-7821",
+        address: "55 Wireless Road, Lumphini, Pathum Wan, Bangkok 10330",
+        method: "Central delivery service",
+        estimate: "2-4 business days",
+      },
+    ],
+    activity: ["SMS verified today", "Profile updated 18 Jun 2026"],
+  },
+  {
+    id: "STU-2300944",
+    name: "Nattapong Srisai",
+    grade: "Grade 10",
+    phone: "086-778-1234",
+    parent: "Mali Srisai",
+    parentPhone: "081-555-9900",
+    school: "Assumption College",
+    courses: ["Chemistry Foundation"],
+    purchases: ["RC-260706-0187"],
+    promotions: ["Student Member Discount", "Buy Course + Book Promotion"],
+    alerts: ["Parent requested callback"],
+    deliveryAddresses: [
+      {
+        id: "ADDR-011",
+        label: "Home",
+        recipient: "Nattapong Srisai",
+        phone: "086-778-1234",
+        address: "24 Charoen Krung Road, Bang Rak, Bangkok 10500",
+        method: "Central delivery service",
+        estimate: "2-4 business days",
+        isDefault: true,
+      },
+    ],
+    activity: ["Bought Chemistry Formula Book today"],
+  },
+  {
+    id: "STU-2207715",
+    name: "Chanida Rattanakul",
+    grade: "Grade 11",
+    phone: "089-555-1200",
+    parent: "Suda Rattanakul",
+    parentPhone: "082-444-1000",
+    school: "Satit Chula",
+    courses: ["Biology Concept E-book"],
+    purchases: ["RC-260702-0144", "RC-260601-0099"],
+    promotions: ["SAT Package", "Student Member Discount"],
+    alerts: ["SMS failed", "Outstanding balance"],
+    deliveryAddresses: [
+      {
+        id: "ADDR-021",
+        label: "Condo",
+        recipient: "Chanida Rattanakul",
+        phone: "089-555-1200",
+        address: "199 Phaya Thai Road, Ratchathewi, Bangkok 10400",
+        method: "Central delivery service",
+        estimate: "2-4 business days",
+        isDefault: true,
+      },
+    ],
+    activity: ["Parent purchased by Student ID"],
+  },
+];
+
+const products: Product[] = [
+  {
+    id: "P-101",
+    name: "A-Level Math Intensive",
+    type: "Digital Course",
+    subject: "Math",
+    grade: "Grade 12",
+    sku: "DC-MATH-A12",
+    price: 12900,
+    availability: "Instant access",
+    detail: "Best seller at this branch",
+    imageTone: "from-sky-600 to-cyan-500",
+  },
+  {
+    id: "P-207",
+    name: "Physics Entrance Booster",
+    type: "Live Class",
+    subject: "Physics",
+    grade: "Grade 11",
+    sku: "LC-PHY-112",
+    price: 18500,
+    availability: "8 seats remaining",
+    detail: "Starts 18 Jul 2026",
+    warning: "Low seats",
+    imageTone: "from-amber-500 to-orange-500",
+  },
+  {
+    id: "P-318",
+    name: "Chemistry Formula Book",
+    type: "Book",
+    subject: "Chemistry",
+    grade: "Grade 10",
+    sku: "BK-CHE-010",
+    price: 690,
+    availability: "Delivery required",
+    detail: "Central delivery after purchase",
+    warning: "Book delivery",
+    imageTone: "from-emerald-600 to-teal-500",
+  },
+  {
+    id: "P-404",
+    name: "Biology Concept E-book",
+    type: "E-book",
+    subject: "Biology",
+    grade: "Grade 12",
+    sku: "EB-BIO-012",
+    price: 1490,
+    availability: "Instant access",
+    detail: "Activation by SMS",
+    imageTone: "from-violet-600 to-fuchsia-500",
+  },
+  {
+    id: "P-511",
+    name: "TGAT English Speed Prep",
+    type: "Digital Course",
+    subject: "English",
+    grade: "Grade 12",
+    sku: "DC-ENG-TGAT",
+    price: 7900,
+    availability: "Instant access",
+    detail: "Popular with walk-ins",
+    imageTone: "from-slate-700 to-slate-500",
+  },
+  {
+    id: "P-612",
+    name: "Math Workbook Set",
+    type: "Book",
+    subject: "Math",
+    grade: "Grade 11",
+    sku: "BK-MATH-W11",
+    price: 1250,
+    availability: "Delivery required",
+    detail: "Central delivery after purchase",
+    warning: "Book delivery",
+    imageTone: "from-rose-600 to-pink-500",
+  },
+];
+
+const initialTransactions: Transaction[] = [
+  {
+    id: "RC-260706-0188",
+    time: "14:16",
+    student: "Pimchanok Wongsa",
+    studentId: "STU-2401829",
+    grade: "Grade 12",
+    phone: "081-234-8891",
+    staff: "Arisa K.",
+    method: "Credit Card",
+    status: "Paid",
+    total: 19890,
+    deliveryAddress: students[0].deliveryAddresses[0],
+    promotionNames: ["Buy Course + Book Promotion"],
+    items: [
+      {
+        productId: "P-101",
+        name: "A-Level Math Intensive",
+        type: "Digital Course",
+        quantity: 1,
+        price: 12900,
+        discount: 500,
+      },
+      {
+        productId: "P-318",
+        name: "Chemistry Formula Book",
+        type: "Book",
+        quantity: 1,
+        price: 690,
+        discount: 0,
+      },
+    ],
+  },
+  {
+    id: "RC-260706-0189",
+    time: "14:24",
+    student: "Pimchanok Wongsa",
+    studentId: "STU-2401829",
+    grade: "Grade 12",
+    phone: "081-234-8891",
+    staff: "Arisa K.",
+    method: "QR Payment",
+    status: "Pending Payment",
+    total: 20330,
+    deliveryAddress: students[0].deliveryAddresses[0],
+    promotionNames: ["Student Member Discount"],
+    items: [
+      {
+        productId: "P-207",
+        name: "Physics Entrance Booster",
+        type: "Live Class",
+        quantity: 1,
+        price: 18500,
+        discount: 500,
+      },
+      {
+        productId: "P-612",
+        name: "Math Workbook Set",
+        type: "Book",
+        quantity: 1,
+        price: 1250,
+        discount: 0,
+      },
+    ],
+  },
+  {
+    id: "RC-260706-0187",
+    time: "14:02",
+    student: "Nattapong Srisai",
+    studentId: "STU-2300944",
+    grade: "Grade 10",
+    phone: "086-778-1234",
+    staff: "Arisa K.",
+    method: "Cash",
+    status: "Paid",
+    total: 690,
+    items: [
+      {
+        productId: "P-318",
+        name: "Chemistry Formula Book",
+        type: "Book",
+        quantity: 1,
+        price: 690,
+        discount: 0,
+      },
+    ],
+  },
+  {
+    id: "RC-260706-0186",
+    time: "13:54",
+    student: "Walk-in: Thanawat",
+    grade: "Grade 12",
+    phone: "082-991-3344",
+    staff: "Arisa K.",
+    method: "QR Payment",
+    status: "SMS sent",
+    total: 12900,
+    items: [
+      {
+        productId: "P-101",
+        name: "A-Level Math Intensive",
+        type: "Digital Course",
+        quantity: 1,
+        price: 12900,
+        discount: 0,
+      },
+    ],
+  },
+  {
+    id: "RC-260706-0181",
+    time: "12:40",
+    student: "Chanida Rattanakul",
+    studentId: "STU-2207715",
+    grade: "Grade 11",
+    phone: "089-555-1200",
+    staff: "Narin P.",
+    method: "QR Payment",
+    status: "Voided",
+    total: 18500,
+    items: [
+      {
+        productId: "P-207",
+        name: "Physics Entrance Booster",
+        type: "Live Class",
+        quantity: 1,
+        price: 18500,
+        discount: 0,
+      },
+    ],
+  },
+];
+
+const filters = [
+  "Favorites",
+  "Recently Viewed",
+  "Best Selling",
+  "Recently Sold",
+  "Digital Course",
+  "Book",
+  "E-book",
+  "Live Class",
+  "Grade 12",
+  "Math",
+];
+
+const voidReasons = [
+  "Wrong Course",
+  "Wrong Student",
+  "Duplicate",
+  "Customer Changed Mind",
+  "Payment Issue",
+  "Other",
+];
+
+const discountReasons = [
+  "Promotion exception",
+  "Staff approved discount",
+  "Customer service recovery",
+  "Bundle adjustment",
+  "Other",
+];
+
+const suspendReasons = [
+  "Waiting for parent confirmation",
+  "Customer forgot wallet",
+  "Waiting for payment",
+  "Customer will come back later",
+  "Staff needs manager confirmation",
+  "Other",
+];
+
+const favoriteProductIds = ["P-101", "P-318", "P-207", "P-404"];
+
+function makeCartLine(product: Product, quantity = 1, discount?: number): CartLine {
+  return {
+    lineId: `${product.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    product,
+    quantity,
+    discount: discount ?? (product.price >= 10000 ? 500 : 0),
+  };
+}
+
+function calculateTotals(cart: CartLine[], manualDiscount = 0) {
+  const subtotal = cart.reduce(
+    (sum, line) => sum + line.product.price * line.quantity,
+    0,
+  );
+  const lineDiscount = cart.reduce(
+    (sum, line) => sum + line.discount * line.quantity,
+    0,
+  );
+  const discount = lineDiscount + manualDiscount;
+  const taxable = Math.max(subtotal - discount, 0);
+  const tax = Math.round(taxable * 0.07);
+  const total = taxable + tax;
+  return { subtotal, discount, lineDiscount, manualDiscount, tax, total };
+}
+
+function cartItemCount(cart: CartLine[]) {
+  return cart.reduce((sum, line) => sum + line.quantity, 0);
+}
+
+function cartProductSummary(cart: CartLine[]) {
+  return cart
+    .map((line) => `${line.product.name}${line.quantity > 1 ? ` x${line.quantity}` : ""}`)
+    .join(", ");
+}
+
+function suspendedSaleTotal(sale: SuspendedSale) {
+  return calculateTotals(sale.cart, sale.discountApproval?.amount ?? 0).total;
+}
+
+function isSaleForStudent(sale: SuspendedSale, student: Student) {
+  return sale.student.id === student.id || sale.student.phone === student.phone;
+}
+
+function transactionsForStudent(transactions: Transaction[], student: Student) {
+  return transactions.filter((transaction) => {
+    if (student.isNew) {
+      return transaction.phone === student.phone;
+    }
+    return transaction.studentId === student.id || transaction.phone === student.phone;
+  });
+}
+
+function studentFromTransaction(transaction: Transaction): Student {
+  const existing = students.find(
+    (student) => student.id === transaction.studentId || student.phone === transaction.phone,
+  );
+  if (existing) return existing;
+  return {
+    id: transaction.studentId ?? `NEW-${transaction.id}`,
+    name: transaction.student.replace("Walk-in: ", ""),
+    grade: transaction.grade ?? "Grade 12",
+    phone: transaction.phone,
+    parent: "Not provided",
+    school: "Not provided",
+    courses: [],
+    purchases: [],
+    promotions: ["New student: SMS activation after payment"],
+    alerts: transaction.status === "SMS sent" ? ["SMS activation sent"] : [],
+    deliveryAddresses: [],
+    activity: [`Created from ${transaction.id}`],
+    isNew: !transaction.studentId,
+  };
+}
+
+function cartHasPhysicalBooks(cart: CartLine[]) {
+  return cart.some((line) => line.product.type === "Book");
+}
+
+function physicalBookCount(cart: CartLine[]) {
+  return cart
+    .filter((line) => line.product.type === "Book")
+    .reduce((sum, line) => sum + line.quantity, 0);
+}
+
+function defaultDeliveryAddress(student: Student | null) {
+  if (!student || student.isNew) return null;
+  return (
+    student.deliveryAddresses.find((address) => address.isDefault) ??
+    student.deliveryAddresses[0] ??
+    null
+  );
+}
+
+function eligiblePromotions(student: Student | null, cart: CartLine[]) {
+  if (!student) return [];
+  const hasBook = cartHasPhysicalBooks(cart);
+  const hasCourse = cart.some((line) => line.product.type === "Digital Course" || line.product.type === "Live Class");
+  return student.promotions.filter((promotion) => {
+    if (promotion.includes("Book")) return hasBook || hasCourse;
+    if (promotion.includes("SAT")) return student.grade === "Grade 12";
+    return true;
+  });
+}
+
+function duplicatePurchaseForStudent(
+  transactions: Transaction[],
+  student: Student | null,
+  product: Product,
+) {
+  if (!student) return null;
+  const transaction = transactionsForStudent(transactions, student)
+    .filter((item) => item.status !== "Voided" && item.status !== "Cancelled")
+    .find((item) => item.items.some((purchased) => purchased.productId === product.id));
+  if (!transaction) return null;
+  return {
+    productName: product.name,
+    purchaseDate: `6 Jul 2026, ${transaction.time}`,
+    receiptId: transaction.id,
+  };
+}
+
+function studentTimeline(
+  student: Student,
+  transactions: Transaction[],
+  suspendedSales: SuspendedSale[],
+) {
+  const events = [
+    ...transactionsForStudent(transactions, student).flatMap((transaction) => {
+      const transactionEvents = transaction.items.map((item) => ({
+        id: `${transaction.id}-${item.productId}`,
+        time: `6 Jul 2026, ${transaction.time}`,
+        title:
+          item.type === "Book"
+            ? "Book purchased"
+            : item.type === "Live Class"
+              ? "Upcoming Live Class"
+              : "Course purchased",
+        detail: `${item.name} | ${transaction.id}`,
+        status:
+          transaction.status === "Voided"
+            ? "Transaction voided"
+            : transaction.status === "Pending Payment"
+              ? "Pending Payment"
+              : item.type === "Book"
+                ? "Delivered"
+                : item.type === "Live Class"
+                  ? "Upcoming Live Class"
+                  : transaction.status === "SMS sent"
+                    ? "SMS Sent"
+                    : "Active",
+      }));
+      return [
+        {
+          id: `${transaction.id}-payment`,
+          time: `6 Jul 2026, ${transaction.time}`,
+          title:
+            transaction.status === "Pending Payment"
+              ? "QR payment pending"
+              : transaction.status === "Cancelled"
+                ? "Payment cancelled"
+                : transaction.status === "Voided"
+                  ? "Transaction voided"
+                  : "Payment completed",
+          detail: `${money(transaction.total)} | ${transaction.method}`,
+          status: transaction.status,
+        },
+        ...(transaction.status === "SMS sent"
+          ? [
+              {
+                id: `${transaction.id}-sms`,
+                time: `6 Jul 2026, ${transaction.time}`,
+                title: "SMS activation sent",
+                detail: maskPhone(transaction.phone),
+                status: "SMS Sent",
+              },
+            ]
+          : []),
+        ...transactionEvents,
+      ];
+    }),
+    ...suspendedSales
+      .filter((sale) => isSaleForStudent(sale, student))
+      .map((sale) => ({
+        id: sale.id,
+        time: `${sale.date}, ${sale.time}`,
+        title: "Suspended Sale created",
+        detail: `${cartProductSummary(sale.cart)} | ${sale.reason}`,
+        status: sale.status,
+      })),
+    ...student.alerts
+      .filter((alert) => alert === "SMS failed")
+      .map((alert) => ({
+        id: `${student.id}-${alert}`,
+        time: "6 Jul 2026, 11:42",
+        title: "SMS failed",
+        detail: "Activation SMS needs resend confirmation.",
+        status: "SMS failed",
+      })),
+  ];
+
+  return events.sort((a, b) => (a.time < b.time ? 1 : -1));
+}
+
+function cartToTransactionItems(cart: CartLine[]): TransactionItem[] {
+  return cart.map((line) => ({
+    productId: line.product.id,
+    name: line.product.name,
+    type: line.product.type,
+    quantity: line.quantity,
+    price: line.product.price,
+    discount: line.discount,
+  }));
+}
+
+function productFromItem(item: TransactionItem) {
+  return products.find((product) => product.id === item.productId);
+}
+
+function recentSoldProducts(transactions: Transaction[]) {
+  const seen = new Set<string>();
+  return transactions
+    .filter((transaction) => transaction.status !== "Voided")
+    .flatMap((transaction) => transaction.items)
+    .map(productFromItem)
+    .filter((product): product is Product => Boolean(product))
+    .filter((product) => {
+      if (seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    })
+    .slice(0, 4);
+}
+
+const initialSuspendedSales: SuspendedSale[] = [
+  {
+    id: "SUS-260706-004",
+    date: "6 Jul 2026",
+    time: "14:21",
+    student: students[0],
+    cart: [
+      makeCartLine(products[1], 1, 500),
+      makeCartLine(products[5], 1, 0),
+    ],
+    discountApproval: {
+      amount: 1000,
+      reason: "Bundle adjustment",
+      manager: "Manager PIN verified",
+      approvedAt: "14:18",
+    },
+    staff: "Arisa K.",
+    reason: "Waiting for parent confirmation",
+    note: "Parent asked to confirm live class schedule before paying.",
+    status: "Suspended",
+  },
+  {
+    id: "SUS-260706-003",
+    date: "6 Jul 2026",
+    time: "13:48",
+    student: students[2],
+    cart: [makeCartLine(products[3], 1, 0)],
+    discountApproval: null,
+    staff: "Narin P.",
+    reason: "Waiting for payment",
+    note: "Customer will return after bank transfer issue is resolved.",
+    status: "Suspended",
+  },
+  {
+    id: "SUS-260706-002",
+    date: "6 Jul 2026",
+    time: "12:55",
+    student: {
+      id: "NEW-260706-006",
+      name: "Thanawat K.",
+      grade: "Grade 12",
+      phone: "082-991-3344",
+      parent: "Not provided",
+      school: "Not provided",
+      courses: [],
+      purchases: [],
+      promotions: ["New student: SMS activation after payment"],
+      alerts: [],
+      deliveryAddresses: [],
+      activity: ["Created at Siam Branch"],
+      isNew: true,
+    },
+    cart: [makeCartLine(products[0], 1, 0)],
+    discountApproval: null,
+    staff: "Arisa K.",
+    reason: "Customer forgot wallet",
+    note: "Will come back after lunch.",
+    status: "Suspended",
+  },
+];
+
+function money(value: number) {
+  return new Intl.NumberFormat("th-TH", {
+    style: "currency",
+    currency: "THB",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function maskPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 10 ? `${digits.slice(0, 3)}-xxx-${digits.slice(-4)}` : phone;
+}
+
+function transactionStatusTone(status: TransactionStatus): "slate" | "sky" | "green" | "amber" | "red" | "violet" {
+  if (status === "Voided" || status === "Cancelled") return "red";
+  if (status === "Pending Payment") return "amber";
+  if (status === "SMS sent") return "sky";
+  return "green";
+}
+
+function Badge({
+  children,
+  tone = "slate",
+}: {
+  children: React.ReactNode;
+  tone?: "slate" | "sky" | "green" | "amber" | "red" | "violet";
+}) {
+  const tones = {
+    slate: "bg-slate-100 text-slate-700",
+    sky: "bg-sky-50 text-sky-800",
+    green: "bg-emerald-50 text-emerald-800",
+    amber: "bg-amber-50 text-amber-800",
+    red: "bg-red-50 text-red-800",
+    violet: "bg-violet-50 text-violet-800",
+  };
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
+
+function IconButton({
+  label,
+  icon,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:border-[#028FC1] disabled:cursor-not-allowed disabled:opacity-40"
+      disabled={disabled}
+      onClick={onClick}
+      title={label}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function PrimaryButton({
+  children,
+  icon,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#028FC1] px-4 text-sm font-semibold text-white hover:bg-[#027da9] disabled:cursor-not-allowed disabled:bg-slate-300 ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function SecondaryButton({
+  children,
+  icon,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:border-[#028FC1] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  error?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-semibold text-slate-700">
+        {label} {required && <span className="text-red-600">*</span>}
+      </span>
+      <input
+        className={`mt-1 h-11 w-full rounded-md border px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100 ${
+          error ? "border-red-300 bg-red-50" : "border-slate-300 bg-white"
+        }`}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {error && <span className="mt-1 block text-xs font-medium text-red-700">{error}</span>}
+    </label>
+  );
+}
+
+function ProductImage({ product }: { product: Product }) {
+  return (
+    <div
+      className={`flex h-28 w-28 shrink-0 flex-col justify-between rounded-md bg-gradient-to-br ${product.imageTone} p-3 text-white`}
+    >
+      <span className="text-xs font-semibold uppercase opacity-80">{product.type}</span>
+      <span className="text-2xl font-semibold">{product.subject.slice(0, 2).toUpperCase()}</span>
+      <span className="text-xs font-medium opacity-90">{product.grade}</span>
+    </div>
+  );
+}
+
+function GlobalSearch({
+  transactions,
+  suspendedSales,
+  onStudentSelect,
+  onProductSelect,
+  onSuspendedSaleSelect,
+  onTransactionSelect,
+}: {
+  transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
+  onStudentSelect: (student: Student) => void;
+  onProductSelect: (product: Product) => void;
+  onSuspendedSaleSelect: (sale: SuspendedSale) => void;
+  onTransactionSelect: (transaction: Transaction) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const normalized = query.trim().toLowerCase();
+  const studentResults = normalized
+    ? students
+        .filter((student) =>
+          `${student.name} ${student.id} ${student.phone} ${student.parent} ${student.parentPhone ?? ""}`.toLowerCase().includes(normalized),
+        )
+        .slice(0, 3)
+    : [];
+  const productResults = normalized
+    ? products
+        .filter((product) =>
+          `${product.name} ${product.type} ${product.subject} ${product.sku}`.toLowerCase().includes(normalized),
+        )
+        .slice(0, 3)
+    : [];
+  const transactionResults = normalized
+    ? transactions
+        .filter((transaction) =>
+          `${transaction.id} ${transaction.student} ${transaction.phone}`.toLowerCase().includes(normalized),
+        )
+        .slice(0, 3)
+    : [];
+  const suspendedResults = normalized
+    ? suspendedSales
+        .filter((sale) =>
+          `${sale.id} ${sale.student.name} ${sale.student.id} ${sale.student.phone} ${sale.reason} ${sale.note} ${cartProductSummary(sale.cart)}`.toLowerCase().includes(normalized),
+        )
+        .slice(0, 3)
+    : [];
+  const hasResults =
+    studentResults.length + productResults.length + transactionResults.length + suspendedResults.length > 0;
+
+  function clear() {
+    setQuery("");
+  }
+
+  function chooseFirstResult() {
+    const firstStudent = studentResults[0];
+    const firstProduct = productResults[0];
+    const firstTransaction = transactionResults[0];
+    const firstSuspended = suspendedResults[0];
+    if (firstStudent) {
+      onStudentSelect(firstStudent);
+    } else if (firstProduct) {
+      onProductSelect(firstProduct);
+    } else if (firstTransaction) {
+      onTransactionSelect(firstTransaction);
+    } else if (firstSuspended) {
+      onSuspendedSaleSelect(firstSuspended);
+    } else {
+      return;
+    }
+    clear();
+  }
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
+  return (
+    <div className="relative hidden min-w-0 max-w-xl flex-1 px-8 lg:block">
+      <label className="relative block">
+        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+        <input
+          ref={searchInputRef}
+          className="h-10 w-full rounded-md border border-slate-300 bg-slate-50 pl-9 pr-20 text-sm outline-none focus:border-[#028FC1] focus:bg-white focus:ring-2 focus:ring-sky-100"
+          placeholder="Search student, product, or receipt"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              chooseFirstResult();
+            }
+            if (event.key === "Escape") {
+              setQuery("");
+              searchInputRef.current?.blur();
+            }
+          }}
+        />
+        <span className="absolute right-2 top-2 rounded border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-500">
+          Cmd K
+        </span>
+      </label>
+      {normalized && (
+        <div className="absolute left-8 right-8 top-12 z-30 max-h-[420px] overflow-auto rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+          {normalized && (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500">
+              <Loader2 size={13} className="animate-spin" />
+              Searching student, parent phone, product, receipt, and suspended sale...
+            </div>
+          )}
+          {!hasResults && (
+            <div className="p-3 text-sm text-slate-500">No matching command or record.</div>
+          )}
+          {studentResults.length > 0 && (
+            <SearchGroup title="Students">
+              {studentResults.map((student) => (
+                <button
+                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-sky-50"
+                  key={student.id}
+                  onClick={() => {
+                    onStudentSelect(student);
+                    clear();
+                  }}
+                >
+                  <span className="block font-semibold">{student.name}</span>
+                  <span className="text-xs text-slate-500">{student.id} | {student.phone}</span>
+                </button>
+              ))}
+            </SearchGroup>
+          )}
+          {productResults.length > 0 && (
+            <SearchGroup title="Products">
+              {productResults.map((product) => (
+                <button
+                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-sky-50"
+                  key={product.id}
+                  onClick={() => {
+                    onProductSelect(product);
+                    clear();
+                  }}
+                >
+                  <span className="block font-semibold">{product.name}</span>
+                  <span className="text-xs text-slate-500">{product.type} | {product.sku}</span>
+                </button>
+              ))}
+            </SearchGroup>
+          )}
+          {transactionResults.length > 0 && (
+            <SearchGroup title="Receipts">
+              {transactionResults.map((transaction) => (
+                <button
+                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-sky-50"
+                  key={transaction.id}
+                  onClick={() => {
+                    onTransactionSelect(transaction);
+                    clear();
+                  }}
+                >
+                  <span className="block font-mono font-semibold">{transaction.id}</span>
+                  <span className="text-xs text-slate-500">{transaction.student} | {money(transaction.total)}</span>
+                </button>
+              ))}
+            </SearchGroup>
+          )}
+          {suspendedResults.length > 0 && (
+            <SearchGroup title="Suspended Sales">
+              {suspendedResults.map((sale) => (
+                <button
+                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-sky-50"
+                  key={sale.id}
+                  onClick={() => {
+                    onSuspendedSaleSelect(sale);
+                    clear();
+                  }}
+                >
+                  <span className="block font-semibold">{sale.student.name}</span>
+                  <span className="text-xs text-slate-500">{sale.reason} | {money(suspendedSaleTotal(sale))}</span>
+                </button>
+              ))}
+            </SearchGroup>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="py-1">
+      <p className="px-3 py-1 text-xs font-semibold uppercase text-slate-500">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function StudentBanner({ student }: { student: Student }) {
+  return (
+    <div className="sticky top-[65px] z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-6 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="truncate text-base font-semibold">{student.name}</h2>
+            <Badge tone={student.isNew ? "violet" : "sky"}>
+              {student.isNew ? "New Student" : "Existing Student"}
+            </Badge>
+          </div>
+          <p className="mt-1 text-sm text-slate-600">
+            {student.isNew ? "Draft profile" : student.id} | {student.grade} | {student.phone}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {student.alerts.slice(0, 2).map((alert) => (
+            <Badge key={alert} tone="amber">{alert}</Badge>
+          ))}
+          <Badge tone="green">{student.promotions.length} eligible promos</Badge>
+          <Badge>{student.courses.length} active courses</Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SystemStatus({ branch }: { branch: string }) {
+  return (
+    <footer className="border-t border-slate-200 bg-white px-6 py-2 text-xs text-slate-600 md:fixed md:bottom-0 md:left-0 md:right-0 md:z-20">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-4">
+          <StatusItem icon={<Wifi size={14} />} label="Branch online" />
+          <StatusItem icon={<Signal size={14} />} label="Payment gateway online" />
+          <StatusItem icon={<Smartphone size={14} />} label="SMS service online" />
+        </div>
+        <span>{branch} | Shift: Afternoon | Staff: {staffName}</span>
+      </div>
+    </footer>
+  );
+}
+
+function StatusItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="text-emerald-600">{icon}</span>
+      {label}
+    </span>
+  );
+}
+
+function Header({
+  activeStudent,
+  branch,
+  cartCount,
+  suspendedCount,
+  pendingCount,
+  transactions,
+  suspendedSales,
+  onHome,
+  onBranchChange,
+  onPendingPayments,
+  onSuspendedSales,
+  onSuspendedSaleSelect,
+  onTransactions,
+  onStudentSelect,
+  onProductSelect,
+  onTransactionSelect,
+}: {
+  activeStudent: Student | null;
+  branch: string;
+  cartCount: number;
+  suspendedCount: number;
+  pendingCount: number;
+  transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
+  onHome: () => void;
+  onBranchChange: (branch: string) => void;
+  onPendingPayments: () => void;
+  onSuspendedSales: () => void;
+  onSuspendedSaleSelect: (sale: SuspendedSale) => void;
+  onTransactions: () => void;
+  onStudentSelect: (student: Student) => void;
+  onProductSelect: (product: Product) => void;
+  onTransactionSelect: (transaction: Transaction) => void;
+}) {
+  return (
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-[1480px] items-center justify-between px-6 py-3">
+        <div className="flex items-center gap-4">
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-md bg-[#028FC1] text-white"
+            onClick={onHome}
+            title="Home"
+          >
+            <Home size={20} />
+          </button>
+          <div>
+            <p className="text-xs font-semibold uppercase text-[#028FC1]">OnDemand Education POS</p>
+            <label className="sr-only" htmlFor="branch-select">Current branch</label>
+            <select
+              id="branch-select"
+              className="mt-0.5 rounded-md border border-transparent bg-white text-xl font-semibold tracking-tight outline-none hover:border-slate-200 focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              value={branch}
+              onChange={(event) => onBranchChange(event.target.value)}
+            >
+              {branchOptions.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <GlobalSearch
+          suspendedSales={suspendedSales}
+          transactions={transactions}
+          onProductSelect={onProductSelect}
+          onStudentSelect={onStudentSelect}
+          onSuspendedSaleSelect={onSuspendedSaleSelect}
+          onTransactionSelect={onTransactionSelect}
+        />
+
+        <div className="flex items-center gap-3 text-sm text-slate-600">
+          {activeStudent && (
+            <span className="hidden max-w-[180px] truncate font-semibold text-slate-900 xl:inline">
+              {activeStudent.name}
+            </span>
+          )}
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 font-semibold text-amber-900"
+            onClick={onSuspendedSales}
+          >
+            <PauseCircle size={16} />
+            Suspended
+            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-xs">
+              {suspendedCount}
+            </span>
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 font-semibold text-sky-900"
+            onClick={onPendingPayments}
+          >
+            <QrCode size={16} />
+            Pending
+            <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-xs">
+              {pendingCount}
+            </span>
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
+            onClick={onTransactions}
+          >
+            <History size={16} />
+            Recent
+          </button>
+          <span className="hidden md:inline">Staff: {staffName}</span>
+          <span className="hidden h-5 w-px bg-slate-200 md:inline" />
+          <span className="hidden md:inline">{currentTime}</span>
+          <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-slate-100 px-2 font-semibold text-slate-900">
+            {cartCount}
+          </span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function CartPanel({
+  activeStudent,
+  cart,
+  discountApproval,
+  duplicateWarning,
+  recommendations,
+  promotions,
+  onAdd,
+  onRemove,
+  onQty,
+  onPayment,
+  onSuspend,
+  onRequestDiscount,
+  onClearDiscount,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  discountApproval: DiscountApproval | null;
+  duplicateWarning: { productName: string; purchaseDate: string; receiptId: string } | null;
+  recommendations: Product[];
+  promotions: string[];
+  onAdd: (product: Product) => void;
+  onRemove: (lineId: string) => void;
+  onQty: (lineId: string, direction: 1 | -1) => void;
+  onPayment: () => void;
+  onSuspend: () => void;
+  onRequestDiscount: () => void;
+  onClearDiscount: () => void;
+}) {
+  const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
+
+  return (
+    <aside className="sticky top-[136px] max-h-[calc(100vh-170px)] overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Current sale</h2>
+          <Badge>{cart.length} lines</Badge>
+        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          Assigned to {activeStudent?.name ?? "selected student"} by default.
+        </p>
+        {cartHasPhysicalBooks(cart) && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <Truck size={17} className="mt-0.5 shrink-0" />
+              <span>
+                <span className="block font-semibold">Book Delivery Required</span>
+                {physicalBookCount(cart)} physical item requires delivery. {activeStudent?.isNew ? "Address will be collected during SMS activation." : "Delivery information will be collected before payment."}
+              </span>
+            </div>
+          </div>
+        )}
+        {duplicateWarning && (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+              <span>
+                <span className="block font-semibold">Duplicate Purchase Warning</span>
+                This student already purchased {duplicateWarning.productName} on {duplicateWarning.purchaseDate}.
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="max-h-[310px] overflow-auto px-4">
+        {cart.length === 0 ? (
+          <div className="py-10 text-center text-sm text-slate-500">
+            Add a product to start the sale.
+          </div>
+        ) : (
+          cart.map((line) => (
+            <div className="border-b border-slate-100 py-4 last:border-0" key={line.lineId}>
+              <div className="flex justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{line.product.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {line.product.type} | {activeStudent?.id ?? "No student"}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold">{money(line.product.price * line.quantity)}</p>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IconButton
+                    disabled={line.quantity === 1}
+                    icon={<Minus size={15} />}
+                    label="Decrease quantity"
+                    onClick={() => onQty(line.lineId, -1)}
+                  />
+                  <span className="w-7 text-center text-sm font-semibold">{line.quantity}</span>
+                  <IconButton
+                    icon={<Plus size={15} />}
+                    label="Increase quantity"
+                    onClick={() => onQty(line.lineId, 1)}
+                  />
+                </div>
+                <IconButton
+                  icon={<Trash2 size={15} />}
+                  label="Remove item"
+                  onClick={() => onRemove(line.lineId)}
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 p-4">
+        <div className="flex items-center gap-2">
+          <Tag size={16} className="text-[#028FC1]" />
+          <h3 className="text-sm font-semibold">Recommended add-ons</h3>
+        </div>
+        {recommendations.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {recommendations.slice(0, 2).map((product) => (
+              <button
+                className="flex w-full items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 text-left text-sm hover:border-[#028FC1]"
+                key={product.id}
+                onClick={() => onAdd(product)}
+              >
+                <span>
+                  <span className="block font-semibold">{product.name}</span>
+                  <span className="text-xs text-slate-500">{product.detail}</span>
+                </span>
+                <Plus size={15} className="shrink-0 text-[#028FC1]" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+            Add a course or book to see relevant add-ons.
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 p-4">
+        <div className="flex items-center gap-2">
+          <Tag size={16} className="text-[#028FC1]" />
+          <h3 className="text-sm font-semibold">Eligible Promotions</h3>
+        </div>
+        {promotions.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {promotions.map((promotion) => (
+              <Badge key={promotion} tone="sky">{promotion}</Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+            No eligible promotions for this cart yet.
+          </p>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 p-4 text-sm">
+        <div className="flex justify-between py-1">
+          <span>Subtotal</span>
+          <span>{money(totals.subtotal)}</span>
+        </div>
+        <div className="flex justify-between py-1 text-emerald-700">
+          <span>Discount</span>
+          <span>-{money(totals.discount)}</span>
+        </div>
+        {discountApproval && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+            <div className="flex items-center justify-between gap-2">
+              <span>
+                Manager approved {money(discountApproval.amount)} | {discountApproval.reason}
+              </span>
+              <button className="font-semibold text-emerald-800" onClick={onClearDiscount}>
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="flex justify-between py-1">
+          <span>Tax</span>
+          <span>{money(totals.tax)}</span>
+        </div>
+        <div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-lg font-semibold">
+          <span>Grand total</span>
+          <span>{money(totals.total)}</span>
+        </div>
+        <PrimaryButton
+          className="mt-4 w-full"
+          disabled={!activeStudent || cart.length === 0}
+          icon={<CreditCard size={17} />}
+          onClick={onPayment}
+        >
+          Review Order
+        </PrimaryButton>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <SecondaryButton
+            className="w-full"
+            disabled={!activeStudent || cart.length === 0}
+            icon={<PauseCircle size={16} />}
+            onClick={onSuspend}
+          >
+            Suspend
+          </SecondaryButton>
+          <SecondaryButton className="w-full" icon={<Tag size={16} />} onClick={onRequestDiscount}>
+            Discount
+          </SecondaryButton>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function HomeScreen({
+  branch,
+  transactions,
+  suspendedSales,
+  pendingPayments,
+  saleNotice,
+  onExisting,
+  onNew,
+  onPendingPayments,
+  onSuspendedSales,
+  onTransactions,
+  onResumeSale,
+}: {
+  branch: string;
+  transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
+  pendingPayments: Transaction[];
+  saleNotice: string;
+  onExisting: () => void;
+  onNew: () => void;
+  onPendingPayments: () => void;
+  onSuspendedSales: () => void;
+  onTransactions: () => void;
+  onResumeSale: (sale: SuspendedSale) => void;
+}) {
+  return (
+    <div className="mx-auto grid max-w-[1180px] gap-5 px-6 py-6 lg:grid-cols-[1fr_360px]">
+      <section className="space-y-5">
+        {saleNotice && (
+          <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm font-medium text-sky-900">
+            {saleNotice}
+          </div>
+        )}
+        <div className="rounded-lg border border-slate-200 bg-white p-6">
+          <p className="text-sm font-semibold text-[#028FC1]">{branch} | {staffName}</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Start a sale</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Choose the customer type to begin the transaction.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <button
+            className="rounded-lg border-2 border-[#028FC1] bg-white p-6 text-left hover:bg-sky-50"
+            onClick={onExisting}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#028FC1] text-white">
+              <User size={24} />
+            </div>
+            <h3 className="mt-5 text-2xl font-semibold">Existing Student</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Search by Student ID, student name, or phone number. Parent purchases use the child Student ID.
+            </p>
+            <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#028FC1]">
+              Search student <ChevronRight size={16} />
+            </span>
+          </button>
+
+          <button
+            className="rounded-lg border border-slate-200 bg-white p-6 text-left hover:border-[#028FC1]"
+            onClick={onNew}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-slate-900 text-white">
+              <UserPlus size={24} />
+            </div>
+            <h3 className="mt-5 text-2xl font-semibold">New Student / Walk-in</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Capture phone number before checkout so the activation code can be sent after payment.
+            </p>
+            <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+              Create sale profile <ChevronRight size={16} />
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="rounded-lg border border-amber-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Suspended Sales</h2>
+                <p className="mt-1 text-sm text-slate-500">Operational queue for unfinished sales.</p>
+              </div>
+              <Badge tone="amber">{suspendedSales.length} suspended</Badge>
+            </div>
+            <SecondaryButton
+              className="mt-4 w-full"
+              icon={<PauseCircle size={16} />}
+              onClick={onSuspendedSales}
+            >
+              Open Suspended Sales
+            </SecondaryButton>
+            {suspendedSales.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              {suspendedSales.slice(0, 2).map((sale) => (
+                <div
+                  className="rounded-md border border-amber-200 bg-amber-50 p-3"
+                  key={sale.id}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold">{sale.student.name}</span>
+                    <span className="text-xs text-amber-800">{sale.time}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {cartItemCount(sale.cart)} items | {money(suspendedSaleTotal(sale))}
+                  </p>
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      className="text-sm font-semibold text-[#028FC1]"
+                      onClick={() => onResumeSale(sale)}
+                    >
+                      Resume Sale
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            ) : (
+              <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                No suspended sales right now.
+              </p>
+            )}
+          </div>
+
+        <div className="rounded-lg border border-sky-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Pending Payments</h2>
+              <p className="mt-1 text-sm text-slate-500">QR payments waiting for customer confirmation.</p>
+            </div>
+            <Badge tone="sky">{pendingPayments.length} pending</Badge>
+          </div>
+          <SecondaryButton
+            className="mt-4 w-full"
+            icon={<QrCode size={16} />}
+            onClick={onPendingPayments}
+          >
+            Open Pending Payments
+          </SecondaryButton>
+          {pendingPayments.length === 0 && (
+            <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+              No pending QR payments right now.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Recent transactions</h2>
+            <SecondaryButton icon={<History size={16} />} onClick={onTransactions}>
+              View all
+            </SecondaryButton>
+          </div>
+          <div className="mt-4 space-y-2">
+            {transactions.slice(0, 4).map((transaction) => (
+              <button
+                className="w-full rounded-md border border-slate-200 p-3 text-left hover:border-[#028FC1]"
+                key={transaction.id}
+                onClick={onTransactions}
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-sm font-semibold">{transaction.id}</span>
+                  <Badge tone={transactionStatusTone(transaction.status)}>{transaction.status}</Badge>
+                </span>
+                <span className="mt-2 flex justify-between text-sm text-slate-600">
+                  <span>{transaction.student}</span>
+                  <span className="font-semibold text-slate-900">{money(transaction.total)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StudentSearchScreen({
+  onSelect,
+  onBack,
+}: {
+  onSelect: (student: Student) => void;
+  onBack: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const results = students.filter((student) => {
+    const normalized = `${student.id} ${student.name} ${student.phone}`.toLowerCase();
+    return normalized.includes(query.toLowerCase());
+  });
+  const isSearching = query.trim().length > 0;
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Existing student"
+        title="Find student account"
+      />
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <label className="relative block">
+          <Search className="absolute left-3 top-3 text-slate-400" size={20} />
+          <input
+            autoFocus
+            className="h-12 w-full rounded-md border border-slate-300 pl-10 pr-3 text-base outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+            placeholder="Search Student ID, student name, or phone number"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && results[0]) {
+                event.preventDefault();
+                onSelect(results[0]);
+              }
+              if (event.key === "Escape") {
+                setQuery("");
+              }
+            }}
+          />
+        </label>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {["STU-2401829", "Pimchanok", "0812348891"].map((sample) => (
+            <button
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold hover:border-[#028FC1]"
+              key={sample}
+              onClick={() => setQuery(sample)}
+            >
+              {sample}
+            </button>
+          ))}
+        </div>
+        {isSearching && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 size={15} className="animate-spin" />
+            Searching student...
+          </div>
+        )}
+      </div>
+
+      <div className="mt-5 grid gap-3">
+        {results.map((student) => (
+          <button
+            className="rounded-lg border border-slate-200 bg-white p-4 text-left hover:border-[#028FC1]"
+            key={student.id}
+            onClick={() => onSelect(student)}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{student.name}</h3>
+                  <Badge tone="sky">{student.grade}</Badge>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  {student.id} | {student.phone} | Parent: {student.parent}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">{student.school}</p>
+              </div>
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#028FC1]">
+                Open profile <ChevronRight size={16} />
+              </span>
+            </div>
+          </button>
+        ))}
+        {results.length === 0 && (
+          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+            No student found. Check Student ID, phone number, or create a New Student / Walk-in sale.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentProfileScreen({
+  student,
+  suspendedSales,
+  transactions,
+  onCatalog,
+  onBack,
+  onResumeSale,
+}: {
+  student: Student;
+  suspendedSales: SuspendedSale[];
+  transactions: Transaction[];
+  onCatalog: () => void;
+  onBack: () => void;
+  onResumeSale: (sale: SuspendedSale) => void;
+}) {
+  const suspendedSale = suspendedSales.find((sale) => isSaleForStudent(sale, student));
+  const studentTransactions = transactionsForStudent(transactions, student);
+  const timeline = studentTimeline(student, transactions, suspendedSales);
+  const purchasedItems = studentTransactions
+    .filter((transaction) => transaction.status !== "Voided")
+    .flatMap((transaction) =>
+      transaction.items.map((item) => ({
+        ...item,
+        purchaseDate: `6 Jul 2026, ${transaction.time}`,
+        receiptId: transaction.id,
+        status:
+          item.type === "Live Class"
+            ? "Upcoming Live Class"
+            : item.type === "Book"
+              ? "Delivered"
+              : student.isNew
+                ? "SMS Sent"
+                : item.type === "E-book"
+                  ? "Activated"
+                  : "Active",
+      })),
+    );
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
+      <ScreenTitle
+        action={
+          <div className="flex gap-2">
+            <SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>
+            <PrimaryButton icon={<ShoppingCart size={17} />} onClick={onCatalog}>Go to Catalog</PrimaryButton>
+          </div>
+        }
+        eyebrow="Student profile"
+        title={student.name}
+      />
+      <StudentAlerts alerts={student.alerts} />
+      {suspendedSale && (
+        <section className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-amber-700" size={20} />
+                <h3 className="text-lg font-semibold text-amber-950">Suspended Sale Found</h3>
+              </div>
+              <p className="mt-2 text-sm text-amber-900">
+                {cartProductSummary(suspendedSale.cart)}
+              </p>
+              <p className="mt-1 text-sm text-amber-900">
+                {money(suspendedSaleTotal(suspendedSale))} | {suspendedSale.date}, {suspendedSale.time} | {suspendedSale.staff}
+              </p>
+            </div>
+            <PrimaryButton icon={<RotateCcw size={17} />} onClick={() => onResumeSale(suspendedSale)}>
+              Resume Sale
+            </PrimaryButton>
+          </div>
+        </section>
+      )}
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <section className="space-y-5">
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="Student ID" value={student.isNew ? "New profile" : student.id} />
+              <Info label="Grade" value={student.grade} />
+              <Info label="Phone Number" value={student.phone} />
+              <Info label="School" value={student.school} />
+              <Info label="Parent Name" value={student.parent} />
+              <Info label="Current Courses" value={student.courses.join(", ") || "No active courses before this sale"} />
+            </div>
+          </div>
+          <PurchaseSection
+            items={purchasedItems.filter((item) => item.type === "Digital Course")}
+            title="Active Digital Courses"
+          />
+          <PurchaseSection
+            items={purchasedItems.filter((item) => item.type === "Book")}
+            title="Purchased Books"
+          />
+          <PurchaseSection
+            items={purchasedItems.filter((item) => item.type === "E-book")}
+            title="E-books"
+          />
+          <PurchaseSection
+            items={purchasedItems.filter((item) => item.type === "Live Class")}
+            title="Live Classes"
+          />
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 className="font-semibold">Purchase History</h3>
+            <div className="mt-3 space-y-2">
+              {studentTransactions.length > 0 ? (
+                studentTransactions.map((transaction) => (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm" key={transaction.id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono font-semibold">{transaction.id}</span>
+                      <Badge tone={transactionStatusTone(transaction.status)}>
+                        {transaction.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-slate-600">
+                      {transaction.items.map((item) => item.name).join(", ")} | {money(transaction.total)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                  No purchase history yet.
+                </div>
+              )}
+            </div>
+          </section>
+          <StudentTimeline events={timeline} />
+        </section>
+        <section className="space-y-4">
+          <PromotionPanel promotions={student.promotions} />
+          <ProfileList title="Recent Activity" items={student.activity} />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function NewStudentScreen({
+  onCreate,
+  onBack,
+}: {
+  onCreate: (student: Student) => void;
+  onBack: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    grade: "Grade 12",
+    parent: "",
+    parentPhone: "",
+    school: "",
+    email: "",
+  });
+  const phoneError =
+    form.phone.length > 0 && !/^0\d{9}$/.test(form.phone.replace(/\D/g, ""))
+      ? "Enter a valid Thai mobile number, 10 digits starting with 0."
+      : "";
+  const canCreate = form.name.trim().length > 1 && /^0\d{9}$/.test(form.phone.replace(/\D/g, ""));
+
+  function update(key: keyof typeof form, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="New student / walk-in"
+        title="Create sale profile"
+      />
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Student Name" required value={form.name} onChange={(value) => update("name", value)} />
+            <Field
+              error={phoneError}
+              label="Phone Number"
+              placeholder="0812345678"
+              required
+              value={form.phone}
+              onChange={(value) => update("phone", value)}
+            />
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Grade <span className="text-red-600">*</span></span>
+              <select
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+                value={form.grade}
+                onChange={(event) => update("grade", event.target.value)}
+              >
+                {["Grade 10", "Grade 11", "Grade 12", "Gap Year"].map((grade) => (
+                  <option key={grade}>{grade}</option>
+                ))}
+              </select>
+            </label>
+            <Field label="Parent Name" value={form.parent} onChange={(value) => update("parent", value)} />
+            <Field label="Parent Phone" value={form.parentPhone} onChange={(value) => update("parentPhone", value)} />
+            <Field label="School" value={form.school} onChange={(value) => update("school", value)} />
+            <Field label="Email" value={form.email} onChange={(value) => update("email", value)} />
+          </div>
+          <div className="mt-5 flex justify-end">
+            <PrimaryButton
+              disabled={!canCreate}
+              icon={<Check size={17} />}
+              onClick={() =>
+                onCreate({
+                  id: "NEW-260706-009",
+                  name: form.name,
+                  grade: form.grade,
+                  phone: form.phone,
+                  parent: form.parent || "Not provided",
+                  school: form.school || "Not provided",
+                  courses: [],
+                  purchases: [],
+                  promotions: ["New student: SMS activation after payment"],
+                  alerts: [],
+                  deliveryAddresses: [],
+                  activity: ["Created at Siam Branch"],
+                  isNew: true,
+                })
+              }
+            >
+              Continue to Catalog
+            </PrimaryButton>
+          </div>
+        </section>
+
+        <aside className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex gap-3">
+            <AlertTriangle className="mt-0.5 shrink-0 text-amber-700" size={20} />
+            <div>
+              <h3 className="font-semibold text-amber-950">Phone is mandatory</h3>
+              <p className="mt-2 text-sm leading-6 text-amber-900">
+                New students receive the activation code by SMS after payment.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function CatalogScreen({
+  activeStudent,
+  cart,
+  discountApproval,
+  duplicateWarning,
+  favoriteIds,
+  lastFilter,
+  recentlyViewedProducts,
+  recentlySold,
+  recommendations,
+  promotions,
+  onAdd,
+  onFilterChange,
+  onRemove,
+  onQty,
+  onPayment,
+  onProfile,
+  onToggleFavorite,
+  onSuspend,
+  onRequestDiscount,
+  onClearDiscount,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  discountApproval: DiscountApproval | null;
+  duplicateWarning: { productName: string; purchaseDate: string; receiptId: string } | null;
+  favoriteIds: string[];
+  lastFilter: string;
+  recentlyViewedProducts: Product[];
+  recentlySold: Product[];
+  recommendations: Product[];
+  promotions: string[];
+  onAdd: (product: Product) => void;
+  onFilterChange: (filter: string) => void;
+  onRemove: (lineId: string) => void;
+  onQty: (lineId: string, direction: 1 | -1) => void;
+  onPayment: () => void;
+  onProfile: () => void;
+  onToggleFavorite: (productId: string) => void;
+  onSuspend: () => void;
+  onRequestDiscount: () => void;
+  onClearDiscount: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState(lastFilter);
+  const isLoadingProducts = query.trim().length > 0;
+  const sourceProducts =
+    filter === "Favorites"
+      ? products.filter((product) => favoriteIds.includes(product.id))
+      : filter === "Recently Viewed"
+        ? recentlyViewedProducts
+      : filter === "Recently Sold"
+        ? recentlySold
+        : products;
+  const filtered = sourceProducts.filter((product) => {
+    const search = `${product.name} ${product.subject} ${product.grade} ${product.sku}`.toLowerCase();
+    const matchesQuery = search.includes(query.toLowerCase());
+    const matchesFilter =
+      filter === "Favorites" ||
+      filter === "Best Selling" ||
+      filter === "Recently Sold" ||
+      product.type === filter ||
+      product.grade === filter ||
+      product.subject === filter;
+    return matchesQuery && matchesFilter;
+  });
+
+  return (
+    <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-5 px-6 py-5 xl:grid-cols-[1fr_380px]">
+      <section className="min-w-0 space-y-5">
+        {activeStudent && (
+          <div className="flex justify-end">
+            <SecondaryButton icon={<User size={16} />} onClick={onProfile}>View Profile</SecondaryButton>
+          </div>
+        )}
+
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex flex-wrap gap-3">
+            <label className="relative min-w-[280px] flex-1">
+              <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+              <input
+                className="h-11 w-full rounded-md border border-slate-300 pl-9 pr-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+                placeholder="Search course, subject, grade, or SKU"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            {filters.map((item) => (
+              <button
+                className={`h-11 rounded-md border px-3 text-sm font-semibold ${
+                  filter === item
+                    ? "border-[#028FC1] bg-sky-50 text-[#027da9]"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+                key={item}
+                onClick={() => {
+                  setFilter(item);
+                  onFilterChange(item);
+                }}
+              >
+                {item}
+              </button>
+            ))}
+            </div>
+          {isLoadingProducts && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 size={15} className="animate-spin" />
+              Loading products...
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">
+                {filter === "Best Selling" ? "Best Selling Courses" : filter}
+              </h2>
+              <p className="text-sm text-slate-500">
+                Fast access to commonly sold items at this branch.
+              </p>
+            </div>
+            <Badge tone="sky">{filtered.length} results</Badge>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {filtered.map((product) => (
+              <article className="rounded-lg border border-slate-200 bg-white p-4" key={product.id}>
+                <div className="flex gap-4">
+                  <ProductImage product={product} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <Badge tone={product.type === "Live Class" ? "amber" : product.type === "Book" ? "green" : "sky"}>
+                          {product.type}
+                        </Badge>
+                        <h3 className="mt-2 font-semibold leading-snug">{product.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{money(product.price)}</p>
+                        <IconButton
+                          icon={
+                            <Star
+                              fill={favoriteIds.includes(product.id) ? "currentColor" : "none"}
+                              size={15}
+                            />
+                          }
+                          label={favoriteIds.includes(product.id) ? "Remove favorite" : "Add favorite"}
+                          onClick={() => onToggleFavorite(product.id)}
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {product.grade} | {product.subject} | {product.sku}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-slate-800">{product.availability}</span>
+                      {product.warning && <Badge tone="amber">{product.warning}</Badge>}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="text-xs text-slate-500">{product.detail}</span>
+                      <PrimaryButton icon={<Plus size={16} />} onClick={() => onAdd(product)}>
+                        Add
+                      </PrimaryButton>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+            {filtered.length === 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 lg:col-span-2">
+                No products match this search. Try SKU, subject, grade, or another category.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <CartPanel
+        activeStudent={activeStudent}
+        cart={cart}
+        discountApproval={discountApproval}
+        duplicateWarning={duplicateWarning}
+        promotions={promotions}
+        recommendations={recommendations}
+        onAdd={onAdd}
+        onClearDiscount={onClearDiscount}
+        onPayment={onPayment}
+        onQty={onQty}
+        onRequestDiscount={onRequestDiscount}
+        onRemove={onRemove}
+        onSuspend={onSuspend}
+      />
+    </div>
+  );
+}
+
+function PaymentScreen({
+  activeStudent,
+  cart,
+  discountApproval,
+  deliveryAddress,
+  lastPaymentMethod,
+  onBack,
+  onPendingPayment,
+  onPaymentMethodChange,
+  onSuccess,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  discountApproval: DiscountApproval | null;
+  deliveryAddress: DeliveryAddress | null;
+  lastPaymentMethod: PaymentMethod;
+  onBack: () => void;
+  onPendingPayment: (method: PaymentMethod) => void;
+  onPaymentMethodChange: (method: PaymentMethod) => void;
+  onSuccess: (method: PaymentMethod) => void;
+}) {
+  const [method, setMethod] = useState<PaymentMethod>(lastPaymentMethod);
+  const [received, setReceived] = useState("25000");
+  const [processing, setProcessing] = useState(false);
+  const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
+  const receivedNumber = Number(received || 0);
+  const change = method === "Cash" ? Math.max(receivedNumber - totals.total, 0) : 0;
+  const canPay = method !== "Cash" || receivedNumber >= totals.total;
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Cart</SecondaryButton>}
+        eyebrow="Payment"
+        title="Collect payment"
+      />
+      <div className="grid gap-5 lg:grid-cols-[1fr_420px]">
+        <section className="space-y-5">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="font-semibold">Payment method</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                { name: "Cash" as PaymentMethod, icon: <Banknote size={20} /> },
+                { name: "Credit Card" as PaymentMethod, icon: <CreditCard size={20} /> },
+                { name: "QR Payment" as PaymentMethod, icon: <QrCode size={20} /> },
+              ].map((option) => (
+                <button
+                  className={`rounded-lg border p-4 text-left ${
+                    method === option.name
+                      ? "border-[#028FC1] bg-sky-50"
+                      : "border-slate-200 bg-white"
+                  }`}
+                  key={option.name}
+                  onClick={() => {
+                    setMethod(option.name);
+                    onPaymentMethodChange(option.name);
+                  }}
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    {option.icon}
+                    {option.name}
+                  </span>
+                  <span className="mt-2 block text-sm text-slate-600">
+                    {option.name === "Cash"
+                      ? "Auto-calculate received and change."
+                      : option.name === "Credit Card"
+                        ? "Mark paid after terminal approval."
+                        : "Show pending until QR confirms."}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Payment status</h2>
+              <Badge tone={method === "QR Payment" ? "amber" : "green"}>
+                {method === "QR Payment" ? "Awaiting QR confirmation" : "Ready"}
+              </Badge>
+            </div>
+            {method === "Cash" ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <Info label="Amount" value={money(totals.total)} />
+                <Field label="Received" value={received} onChange={setReceived} />
+                <Info label="Change" value={money(change)} />
+              </div>
+            ) : (
+              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Confirm {method.toLowerCase()} approval before completing the sale.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="font-semibold">Items</h2>
+            <div className="mt-3 divide-y divide-slate-100">
+              {cart.map((line) => (
+                <div className="flex justify-between gap-4 py-3 text-sm" key={line.lineId}>
+                  <div>
+                    <p className="font-semibold">{line.product.name}</p>
+                    <p className="mt-1 text-slate-500">{line.product.type} | Qty {line.quantity}</p>
+                  </div>
+                  <p className="font-semibold">{money(line.product.price * line.quantity)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <aside className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold">Summary</h2>
+          <div className="mt-3 text-sm">
+            <InfoRow label="Student" value={activeStudent?.name ?? "No student"} />
+            <InfoRow label="Subtotal" value={money(totals.subtotal)} />
+            <InfoRow label="Discount" value={`-${money(totals.discount)}`} />
+            {discountApproval && (
+              <InfoRow label="Discount Reason" value={discountApproval.reason} />
+            )}
+            {deliveryAddress && (
+              <InfoRow label="Delivery" value={deliveryAddress.label} />
+            )}
+            <InfoRow label="Tax" value={money(totals.tax)} />
+            <div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-xl font-semibold">
+              <span>Grand Total</span>
+              <span>{money(totals.total)}</span>
+            </div>
+          </div>
+          {!canPay && (
+            <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+              Cash received is less than the amount due.
+            </div>
+          )}
+          <PrimaryButton
+            className="mt-4 w-full"
+            disabled={!canPay || processing}
+            icon={processing ? <Loader2 className="animate-spin" size={18} /> : method === "QR Payment" ? <QrCode size={18} /> : <CheckCircle2 size={18} />}
+            onClick={() => {
+              setProcessing(true);
+              window.setTimeout(() => {
+                if (method === "QR Payment") {
+                  onPendingPayment(method);
+                } else {
+                  onSuccess(method);
+                }
+              }, 650);
+            }}
+          >
+            {processing ? "Processing payment..." : method === "QR Payment" ? "Generate QR Payment" : "Complete Payment"}
+          </PrimaryButton>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function SuccessScreen({
+  activeStudent,
+  cart,
+  receiptId,
+  total,
+  onNewSale,
+  onProfile,
+  onReceiptPreview,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  receiptId: string;
+  total: number;
+  onNewSale: () => void;
+  onProfile: () => void;
+  onReceiptPreview: () => void;
+}) {
+  const [successNotice, setSuccessNotice] = useState("");
+
+  return (
+    <div className="mx-auto max-w-[980px] px-6 py-8">
+      <section className="rounded-lg border border-emerald-200 bg-white p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+            <CheckCircle2 size={30} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-emerald-700">Payment success</p>
+            <h2 className="mt-1 text-3xl font-semibold tracking-tight">{receiptId}</h2>
+            <p className="mt-2 text-slate-600">
+              {activeStudent?.isNew
+                ? `SMS activation code has been sent to ${maskPhone(activeStudent.phone)}.`
+                : "Activation status is updated on the student account."}
+            </p>
+          </div>
+          <Badge tone="green">{money(total)}</Badge>
+        </div>
+
+        <div className="mt-6 rounded-lg border border-slate-200">
+          {cart.map((line) => (
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={line.lineId}>
+              <div>
+                <p className="font-semibold">{line.product.name}</p>
+                <p className="mt-1 text-slate-500">{line.product.type} | Activation: Ready</p>
+              </div>
+              <span>{money(line.product.price * line.quantity)}</span>
+            </div>
+          ))}
+        </div>
+        {successNotice && (
+          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">
+            {successNotice}
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-3 md:grid-cols-5">
+          <SecondaryButton icon={<Printer size={17} />} onClick={() => setSuccessNotice(`Print receipt queued for ${receiptId}.`)}>Print Receipt</SecondaryButton>
+          <SecondaryButton icon={<FileText size={17} />} onClick={onReceiptPreview}>Preview</SecondaryButton>
+          <SecondaryButton icon={<MessageSquareText size={17} />} onClick={() => setSuccessNotice(`SMS resend queued for ${maskPhone(activeStudent?.phone ?? "")}.`)}>Send SMS Again</SecondaryButton>
+          <SecondaryButton icon={<User size={17} />} onClick={onProfile}>View Profile</SecondaryButton>
+          <PrimaryButton icon={<RotateCcw size={17} />} onClick={onNewSale}>Start New Sale</PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SuspendedSalesScreen({
+  suspendedSales,
+  onBack,
+  onCancelSale,
+  onOpenDetail,
+  onResumeSale,
+}: {
+  suspendedSales: SuspendedSale[];
+  onBack: () => void;
+  onCancelSale: (sale: SuspendedSale) => void;
+  onOpenDetail: (sale: SuspendedSale) => void;
+  onResumeSale: (sale: SuspendedSale) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const normalized = query.trim().toLowerCase();
+  const filtered = suspendedSales.filter((sale) =>
+    `${sale.student.name} ${sale.student.id} ${sale.student.phone} ${cartProductSummary(sale.cart)} ${sale.reason} ${sale.note} ${sale.staff}`
+      .toLowerCase()
+      .includes(normalized),
+  );
+
+  return (
+    <div className="mx-auto max-w-[1380px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Operations queue"
+        title="Suspended Sales"
+      />
+      <div className="mb-5 grid gap-4 md:grid-cols-[1fr_220px]">
+        <label className="relative block">
+          <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+          <input
+            autoFocus
+            className="h-11 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+            placeholder="Search student, phone, item, reason, note, or staff"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+          {suspendedSales.length} suspended cases
+        </div>
+      </div>
+
+      <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="grid min-w-[1180px] grid-cols-[1.1fr_130px_140px_90px_1.2fr_130px_140px_1fr_110px_230px] border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+          <span>Student</span>
+          <span>Student ID</span>
+          <span>Phone</span>
+          <span>Items</span>
+          <span>Products</span>
+          <span>Total</span>
+          <span>Suspended</span>
+          <span>Reason / Note</span>
+          <span>Status</span>
+          <span>Actions</span>
+        </div>
+        {filtered.map((sale) => (
+          <div
+            className="grid min-w-[1180px] grid-cols-[1.1fr_130px_140px_90px_1.2fr_130px_140px_1fr_110px_230px] items-center border-b border-slate-100 px-4 py-3 text-sm last:border-0"
+            key={sale.id}
+          >
+            <span>
+              <span className="block font-semibold">{sale.student.name}</span>
+              <span className="text-xs text-slate-500">{sale.staff}</span>
+            </span>
+            <span>{sale.student.isNew ? "New" : sale.student.id}</span>
+            <span>{sale.student.phone}</span>
+            <span>{cartItemCount(sale.cart)}</span>
+            <span className="truncate pr-3">{cartProductSummary(sale.cart)}</span>
+            <span className="font-semibold">{money(suspendedSaleTotal(sale))}</span>
+            <span>
+              <span className="block">{sale.date}</span>
+              <span className="text-xs text-slate-500">{sale.time}</span>
+            </span>
+            <span>
+              <span className="block font-medium">{sale.reason}</span>
+              {sale.note && <span className="text-xs text-slate-500">{sale.note}</span>}
+            </span>
+            <span><Badge tone="amber">{sale.status}</Badge></span>
+            <span className="flex flex-wrap gap-2">
+              <PrimaryButton className="min-h-9 px-3" icon={<RotateCcw size={15} />} onClick={() => onResumeSale(sale)}>
+                Resume
+              </PrimaryButton>
+              <IconButton icon={<ReceiptText size={15} />} label="View Detail" onClick={() => onOpenDetail(sale)} />
+              <IconButton icon={<X size={15} />} label="Cancel Suspended Sale" onClick={() => onCancelSale(sale)} />
+            </span>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-sm text-slate-500">
+            No suspended sales match this search.
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SuspendedSaleDetailScreen({
+  sale,
+  onBack,
+  onCancelSale,
+  onResumeSale,
+}: {
+  sale: SuspendedSale;
+  onBack: () => void;
+  onCancelSale: (sale: SuspendedSale) => void;
+  onResumeSale: (sale: SuspendedSale) => void;
+}) {
+  const totals = calculateTotals(sale.cart, sale.discountApproval?.amount ?? 0);
+
+  return (
+    <div className="mx-auto max-w-[980px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Queue</SecondaryButton>}
+        eyebrow="Suspended sale detail"
+        title={sale.student.name}
+      />
+      <section className="rounded-lg border border-amber-200 bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Badge tone="amber">{sale.status}</Badge>
+            <p className="mt-3 text-sm text-slate-600">
+              {sale.student.isNew ? "New Student / Walk-in" : sale.student.id} | {sale.student.phone}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-semibold">{money(totals.total)}</p>
+            <p className="mt-1 text-sm text-slate-500">{sale.date}, {sale.time}</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <Info label="Staff who suspended" value={sale.staff} />
+          <Info label="Reason" value={sale.reason} />
+          <Info label="Note" value={sale.note || "No note"} />
+          <Info label="Item Count" value={`${cartItemCount(sale.cart)} items`} />
+        </div>
+        <div className="mt-5 rounded-lg border border-slate-200">
+          {sale.cart.map((line) => (
+            <div className="flex justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={line.lineId}>
+              <span>
+                <span className="block font-semibold">{line.product.name}</span>
+                <span className="text-xs text-slate-500">{line.product.type} | Qty {line.quantity}</span>
+              </span>
+              <span className="font-semibold">{money(line.product.price * line.quantity)}</span>
+            </div>
+          ))}
+        </div>
+        {sale.discountApproval && (
+          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            Restores manager discount: {money(sale.discountApproval.amount)} | {sale.discountApproval.reason}
+          </div>
+        )}
+        <div className="mt-5 flex flex-wrap justify-end gap-3">
+          <SecondaryButton icon={<X size={17} />} onClick={() => onCancelSale(sale)}>
+            Cancel Suspended Sale
+          </SecondaryButton>
+          <PrimaryButton icon={<RotateCcw size={17} />} onClick={() => onResumeSale(sale)}>
+            Resume Sale
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DeliveryInfoScreen({
+  student,
+  selectedAddress,
+  onBack,
+  onContinue,
+  onSelectAddress,
+}: {
+  student: Student;
+  selectedAddress: DeliveryAddress | null;
+  onBack: () => void;
+  onContinue: () => void;
+  onSelectAddress: (address: DeliveryAddress) => void;
+}) {
+  const [addresses, setAddresses] = useState(student.deliveryAddresses);
+  const [editing, setEditing] = useState(false);
+  const [editAddressId, setEditAddressId] = useState<string | null>(null);
+  const [newRecipient, setNewRecipient] = useState(student.name);
+  const [newPhone, setNewPhone] = useState(student.phone);
+  const [newAddress, setNewAddress] = useState("");
+  const activeAddress = selectedAddress ?? defaultDeliveryAddress(student);
+
+  function addAddress() {
+    if (!newAddress.trim()) return;
+    if (editAddressId) {
+      const updatedAddress: DeliveryAddress = {
+        id: editAddressId,
+        label: addresses.find((address) => address.id === editAddressId)?.label ?? "Edited address",
+        recipient: newRecipient,
+        phone: newPhone,
+        address: newAddress,
+        method: "Central delivery service",
+        estimate: "2-4 business days",
+      };
+      setAddresses((current) =>
+        current.map((address) => (address.id === editAddressId ? updatedAddress : address)),
+      );
+      onSelectAddress(updatedAddress);
+      setEditing(false);
+      setEditAddressId(null);
+      setNewAddress("");
+      return;
+    }
+    const address: DeliveryAddress = {
+      id: `ADDR-${Date.now()}`,
+      label: "New address",
+      recipient: newRecipient,
+      phone: newPhone,
+      address: newAddress,
+      method: "Central delivery service",
+      estimate: "2-4 business days",
+    };
+    setAddresses((current) => [...current, address]);
+    onSelectAddress(address);
+    setEditing(false);
+    setNewAddress("");
+  }
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Checkout"
+        title="Delivery Information"
+      />
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <section className="space-y-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="flex gap-3">
+              <Truck className="shrink-0" size={20} />
+              <div>
+                <p className="font-semibold">Book Delivery Required</p>
+                <p className="mt-1">Physical books are fulfilled through the central delivery service after purchase.</p>
+              </div>
+            </div>
+          </div>
+          {addresses.map((address) => (
+            <article
+              className={`w-full rounded-lg border p-4 text-left ${activeAddress?.id === address.id ? "border-[#028FC1] bg-sky-50" : "border-slate-200 bg-white"}`}
+              key={address.id}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{address.label}</h3>
+                    {address.isDefault && <Badge tone="green">Default</Badge>}
+                  </div>
+                  <p className="mt-2 text-sm text-slate-700">{address.recipient} | {address.phone}</p>
+                  <p className="mt-1 text-sm text-slate-600">{address.address}</p>
+                  <p className="mt-1 text-sm text-slate-500">{address.method} | {address.estimate}</p>
+                </div>
+                <div className="flex gap-2">
+                  <SecondaryButton icon={<MapPin size={16} />} onClick={() => onSelectAddress(address)}>Select</SecondaryButton>
+                  <SecondaryButton
+                    icon={<FileText size={16} />}
+                    onClick={() => {
+                      setEditAddressId(address.id);
+                      setNewRecipient(address.recipient);
+                      setNewPhone(address.phone);
+                      setNewAddress(address.address);
+                      setEditing(true);
+                    }}
+                  >
+                    Edit
+                  </SecondaryButton>
+                </div>
+              </div>
+            </article>
+          ))}
+          {editing ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Recipient Name" value={newRecipient} onChange={setNewRecipient} />
+                <Field label="Phone Number" value={newPhone} onChange={setNewPhone} />
+              </div>
+              <label className="mt-4 block">
+                <span className="text-sm font-semibold text-slate-700">Delivery Address</span>
+                <textarea
+                  className="mt-1 min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+                  value={newAddress}
+                  onChange={(event) => setNewAddress(event.target.value)}
+                />
+              </label>
+              <div className="mt-4 flex justify-end gap-3">
+                <SecondaryButton onClick={() => {
+                  setEditing(false);
+                  setEditAddressId(null);
+                  setNewAddress("");
+                }}>Cancel</SecondaryButton>
+                <PrimaryButton icon={<Check size={17} />} onClick={addAddress}>
+                  {editAddressId ? "Update Address" : "Save Address"}
+                </PrimaryButton>
+              </div>
+            </div>
+          ) : (
+            <SecondaryButton
+              className="w-full"
+              icon={<Plus size={16} />}
+              onClick={() => {
+                setEditAddressId(null);
+                setNewRecipient(student.name);
+                setNewPhone(student.phone);
+                setNewAddress("");
+                setEditing(true);
+              }}
+            >
+              Add New Address
+            </SecondaryButton>
+          )}
+        </section>
+        <aside className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold">Selected Delivery</h2>
+          {activeAddress ? (
+            <div className="mt-4 space-y-3 text-sm">
+              <Info label="Recipient Name" value={activeAddress.recipient} />
+              <Info label="Phone Number" value={activeAddress.phone} />
+              <Info label="Delivery Address" value={activeAddress.address} />
+              <Info label="Delivery Method" value={activeAddress.method} />
+              <Info label="Estimated Delivery" value={activeAddress.estimate} />
+              <Badge tone="amber">Book Delivery Required</Badge>
+            </div>
+          ) : (
+            <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+              Select or add a delivery address to continue.
+            </p>
+          )}
+          <PrimaryButton
+            className="mt-5 w-full"
+            disabled={!activeAddress}
+            icon={<ChevronRight size={17} />}
+            onClick={() => {
+              if (activeAddress) onSelectAddress(activeAddress);
+              onContinue();
+            }}
+          >
+            Continue to Order Summary
+          </PrimaryButton>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function OrderSummaryScreen({
+  activeStudent,
+  cart,
+  discountApproval,
+  deliveryAddress,
+  promotions,
+  onBack,
+  onContinue,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  discountApproval: DiscountApproval | null;
+  deliveryAddress: DeliveryAddress | null;
+  promotions: string[];
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
+
+  return (
+    <div className="mx-auto max-w-[980px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Pre-payment"
+        title="Order Summary"
+      />
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap justify-between gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-500">Customer</p>
+            <h3 className="mt-1 text-lg font-semibold">{activeStudent?.name ?? "No student"}</h3>
+            <p className="mt-1 text-sm text-slate-600">{activeStudent?.id} | {activeStudent?.phone}</p>
+          </div>
+          <Badge tone="sky">Quotation</Badge>
+        </div>
+        <div className="mt-4 rounded-lg border border-slate-200">
+          {cart.map((line) => (
+            <div className="flex justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={line.lineId}>
+              <span>
+                <span className="block font-semibold">{line.product.name}</span>
+                <span className="text-xs text-slate-500">{line.product.type} | Qty {line.quantity}</span>
+              </span>
+              <span className="font-semibold">{money(line.product.price * line.quantity)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <h4 className="text-sm font-semibold">Promotions</h4>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {promotions.length > 0 ? promotions.map((promotion) => <Badge key={promotion} tone="sky">{promotion}</Badge>) : <span className="text-sm text-slate-500">No promotion selected.</span>}
+            </div>
+          </section>
+          <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
+            <h4 className="text-sm font-semibold">Delivery requirement</h4>
+            {deliveryAddress ? (
+              <p className="mt-2 text-sm text-slate-600">{deliveryAddress.recipient} | {deliveryAddress.estimate}</p>
+            ) : cartHasPhysicalBooks(cart) && activeStudent && !activeStudent.isNew ? (
+              <p className="mt-2 text-sm text-amber-700">Book delivery information required before payment.</p>
+            ) : cartHasPhysicalBooks(cart) ? (
+              <p className="mt-2 text-sm text-slate-600">Student enters delivery address during SMS activation.</p>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">No delivery required.</p>
+            )}
+          </section>
+        </div>
+        <div className="mt-5 ml-auto max-w-sm text-sm">
+          <InfoRow label="Subtotal" value={money(totals.subtotal)} />
+          <InfoRow label="Discounts" value={`-${money(totals.discount)}`} />
+          <InfoRow label="Tax" value={money(totals.tax)} />
+          <div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-xl font-semibold">
+            <span>Total</span>
+            <span>{money(totals.total)}</span>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end">
+          <PrimaryButton icon={<CreditCard size={17} />} onClick={onContinue}>Continue to Payment</PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReceiptPreviewScreen({
+  activeStudent,
+  cart,
+  deliveryAddress,
+  receiptId,
+  total,
+  onBack,
+}: {
+  activeStudent: Student | null;
+  cart: CartLine[];
+  deliveryAddress: DeliveryAddress | null;
+  receiptId: string;
+  total: number;
+  onBack: () => void;
+}) {
+  const [receiptNotice, setReceiptNotice] = useState("");
+  function mockReceiptAction(action: string) {
+    setReceiptNotice(`${action} queued for ${receiptId}.`);
+  }
+
+  return (
+    <div className="mx-auto max-w-[980px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Receipt"
+        title="Receipt Preview"
+      />
+      <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
+        <section className="rounded-lg border border-slate-300 bg-white p-8 font-mono text-sm">
+          <div className="text-center">
+            <p className="text-lg font-bold">OnDemand Thailand</p>
+            <p>Siam Branch</p>
+            <p>{receiptId}</p>
+            <p>6 Jul 2026, 14:33</p>
+          </div>
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          <p>Student: {activeStudent?.name}</p>
+          <p>Phone: {activeStudent?.phone}</p>
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          {cart.map((line) => (
+            <div className="mb-3 flex justify-between gap-4" key={line.lineId}>
+              <span>{line.product.name} x{line.quantity}</span>
+              <span>{money(line.product.price * line.quantity)}</span>
+            </div>
+          ))}
+          {deliveryAddress && (
+            <>
+              <div className="my-5 border-t border-dashed border-slate-300" />
+              <p>Delivery: {deliveryAddress.recipient}</p>
+              <p>{deliveryAddress.phone}</p>
+              <p>{deliveryAddress.address}</p>
+              <p>{deliveryAddress.estimate}</p>
+            </>
+          )}
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          <div className="flex justify-between text-lg font-bold">
+            <span>TOTAL</span>
+            <span>{money(total)}</span>
+          </div>
+          <p className="mt-5 text-center">Thank you</p>
+        </section>
+        <aside className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold">Receipt Actions</h2>
+          {receiptNotice && (
+            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">
+              {receiptNotice}
+            </div>
+          )}
+          <div className="mt-4 grid gap-3">
+            <PrimaryButton icon={<Printer size={17} />} onClick={() => mockReceiptAction("Print receipt")}>Print Receipt</PrimaryButton>
+            <SecondaryButton icon={<Download size={17} />} onClick={() => mockReceiptAction("PDF download")}>Download PDF</SecondaryButton>
+            <SecondaryButton icon={<Mail size={17} />} onClick={() => mockReceiptAction("Email receipt")}>Email Receipt</SecondaryButton>
+            <SecondaryButton icon={<MessageSquareText size={17} />} onClick={() => mockReceiptAction("SMS resend")}>Send SMS Again</SecondaryButton>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function PendingPaymentsScreen({
+  transactions,
+  onBack,
+  onCancelPayment,
+  onCompletePayment,
+  onResumePayment,
+}: {
+  transactions: Transaction[];
+  onBack: () => void;
+  onCancelPayment: (transaction: Transaction) => void;
+  onCompletePayment: (transaction: Transaction) => void;
+  onResumePayment: (transaction: Transaction) => void;
+}) {
+  const pending = transactions.filter((transaction) => transaction.status === "Pending Payment");
+  const [query, setQuery] = useState("");
+  const isLoadingPending = query.trim().length > 0;
+  const filtered = pending.filter((transaction) =>
+    `${transaction.id} ${transaction.student} ${transaction.phone} ${transaction.items.map((item) => item.name).join(" ")}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  );
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Operations queue"
+        title="Pending Payments"
+      />
+      <label className="relative mb-5 block">
+        <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+        <input
+          className="h-11 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+          placeholder="Search pending payment, receipt, student, phone, or item"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      {isLoadingPending && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
+          <Loader2 size={15} className="animate-spin" />
+          Loading pending payments...
+        </div>
+      )}
+      {filtered.length > 0 ? (
+        <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="grid min-w-[980px] grid-cols-[1.1fr_1fr_1.4fr_130px_130px_260px] border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+            <span>Receipt</span>
+            <span>Student</span>
+            <span>Products</span>
+            <span>Total</span>
+            <span>Status</span>
+            <span>Actions</span>
+          </div>
+          {filtered.map((transaction) => (
+            <div className="grid min-w-[980px] grid-cols-[1.1fr_1fr_1.4fr_130px_130px_260px] items-center border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={transaction.id}>
+              <span>
+                <span className="block font-mono font-semibold">{transaction.id}</span>
+                <span className="text-xs text-slate-500">{transaction.time} | QR generated</span>
+              </span>
+              <span>{transaction.student}</span>
+              <span className="truncate pr-4">{transaction.items.map((item) => item.name).join(", ")}</span>
+              <span className="font-semibold">{money(transaction.total)}</span>
+              <span><Badge tone="amber">Pending Payment</Badge></span>
+              <span className="flex flex-wrap gap-2">
+                <PrimaryButton className="min-h-9 px-3" icon={<CheckCircle2 size={15} />} onClick={() => onCompletePayment(transaction)}>Complete</PrimaryButton>
+                <IconButton icon={<CreditCard size={15} />} label="Resume Payment" onClick={() => onResumePayment(transaction)} />
+                <IconButton icon={<X size={15} />} label="Cancel Payment" onClick={() => onCancelPayment(transaction)} />
+              </span>
+            </div>
+          ))}
+        </section>
+      ) : (
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
+          <QrCode className="mx-auto text-slate-400" size={32} />
+          <h3 className="mt-3 font-semibold">No Pending Payments</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            QR payments waiting for customer confirmation will appear here.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TransactionsScreen({
+  transactions,
+  onBack,
+  onOpen,
+}: {
+  transactions: Transaction[];
+  onBack: () => void;
+  onOpen: (transaction: Transaction) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const isLoadingTransactions = query.trim().length > 0;
+  const filteredTransactions = transactions.filter((transaction) =>
+    `${transaction.id} ${transaction.student} ${transaction.phone} ${transaction.items.map((item) => item.name).join(" ")}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  );
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Operations"
+        title="Recent transactions"
+      />
+      <label className="relative mb-5 block">
+        <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+        <input
+          className="h-11 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+          placeholder="Search receipt, student, phone, or product"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      {isLoadingTransactions && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
+          <Loader2 size={15} className="animate-spin" />
+          Loading transaction history...
+        </div>
+      )}
+      <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        {filteredTransactions.length === 0 ? (
+          <div className="p-8 text-center">
+            <ReceiptText className="mx-auto text-slate-400" size={32} />
+            <h3 className="mt-3 font-semibold">
+              {query ? "No Matching Transactions" : "No Recent Transactions"}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {query ? "Try receipt number, student name, phone, or product." : "Completed sales will appear here after checkout."}
+            </p>
+          </div>
+        ) : (
+          <>
+        <div className="grid min-w-[920px] grid-cols-[1.1fr_1fr_140px_120px_120px_150px] border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+          <span>Receipt</span>
+          <span>Student</span>
+          <span>Total</span>
+          <span>Method</span>
+          <span>Status</span>
+          <span>Actions</span>
+        </div>
+        {filteredTransactions.map((transaction) => (
+          <div
+            className="grid min-w-[920px] grid-cols-[1.1fr_1fr_140px_120px_120px_150px] items-center border-b border-slate-100 px-4 py-3 text-sm last:border-0"
+            key={transaction.id}
+          >
+            <span>
+              <span className="block font-mono font-semibold">{transaction.id}</span>
+              <span className="text-xs text-slate-500">{transaction.time} | {transaction.staff}</span>
+            </span>
+            <span>{transaction.student}</span>
+            <span className="font-semibold">{money(transaction.total)}</span>
+            <span>{transaction.method}</span>
+            <span>
+              <Badge tone={transactionStatusTone(transaction.status)}>
+                {transaction.status}
+              </Badge>
+            </span>
+            <span className="flex gap-2">
+              <IconButton icon={<ReceiptText size={15} />} label="View" onClick={() => onOpen(transaction)} />
+              <IconButton icon={<Printer size={15} />} label="Reprint" />
+              <IconButton
+                disabled={transaction.status !== "Paid" && transaction.status !== "SMS sent"}
+                icon={<X size={15} />}
+                label="Void"
+                onClick={() => onOpen(transaction)}
+              />
+            </span>
+          </div>
+        ))}
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function TransactionDetailScreen({
+  transaction,
+  onBack,
+  onDuplicate,
+  onVoid,
+}: {
+  transaction: Transaction;
+  onBack: () => void;
+  onDuplicate: () => void;
+  onVoid: () => void;
+}) {
+  return (
+    <div className="mx-auto max-w-[980px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Transaction detail"
+        title={transaction.id}
+      />
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Info label="Student" value={transaction.student} />
+          <Info label="Phone" value={transaction.phone} />
+          <Info label="Staff" value={transaction.staff} />
+          <Info label="Payment Method" value={transaction.method} />
+          <Info label="Status" value={transaction.status} />
+          <Info label="Total" value={money(transaction.total)} />
+          {transaction.deliveryAddress && (
+            <Info label="Delivery Address" value={`${transaction.deliveryAddress.recipient} | ${transaction.deliveryAddress.address}`} />
+          )}
+        </div>
+        <div className="mt-5 rounded-lg border border-slate-200">
+          {transaction.items.map((item) => (
+            <div className="flex justify-between border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-${item.productId}`}>
+              <span>
+                <span className="block font-semibold">{item.name}</span>
+                <span className="text-xs text-slate-500">{item.type} | Qty {item.quantity}</span>
+              </span>
+              <span>{money(item.price * item.quantity - item.discount * item.quantity)}</span>
+            </div>
+          ))}
+        </div>
+        {transaction.discountApproval && (
+          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            Manager discount: {money(transaction.discountApproval.amount)} | {transaction.discountApproval.reason} | Approved by {transaction.discountApproval.manager}
+          </div>
+        )}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <SecondaryButton icon={<Printer size={17} />}>Reprint Receipt</SecondaryButton>
+          <SecondaryButton icon={<Copy size={17} />} onClick={onDuplicate}>Duplicate Sale</SecondaryButton>
+          <PrimaryButton
+            className="bg-red-600 hover:bg-red-700"
+            disabled={transaction.status !== "Paid" && transaction.status !== "SMS sent"}
+            icon={<ShieldCheck size={17} />}
+            onClick={onVoid}
+          >
+            Void Transaction
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function VoidFlowScreen({
+  transaction,
+  onCancel,
+  onComplete,
+}: {
+  transaction: Transaction;
+  onCancel: () => void;
+  onComplete: () => void;
+}) {
+  const [managerCode, setManagerCode] = useState("");
+  const [reason, setReason] = useState("Wrong Course");
+  const [confirm, setConfirm] = useState(false);
+  const canVoid = managerCode.trim().length >= 4 && reason && confirm;
+
+  return (
+    <div className="mx-auto max-w-[860px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onCancel}>Cancel</SecondaryButton>}
+        eyebrow="Manager approval"
+        title="Void transaction"
+      />
+      <section className="rounded-lg border border-red-200 bg-white p-5">
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <div className="flex gap-3">
+            <AlertTriangle className="shrink-0" size={20} />
+            <p>
+              Voiding receipt {transaction.id} reverses the sale and should only be done with manager approval.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <Field
+            label="Manager Approval Code"
+            placeholder="Enter manager code"
+            required
+            value={managerCode}
+            onChange={setManagerCode}
+          />
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Reason <span className="text-red-600">*</span></span>
+            <select
+              className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            >
+              {voidReasons.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="mt-5 flex items-start gap-3 rounded-md border border-slate-200 p-4 text-sm">
+          <input
+            className="mt-1 h-4 w-4 accent-[#028FC1]"
+            checked={confirm}
+            type="checkbox"
+            onChange={(event) => setConfirm(event.target.checked)}
+          />
+          <span>
+            I confirm the student, products, payment, and reason have been reviewed with a manager.
+          </span>
+        </label>
+        <div className="mt-5 flex justify-end gap-3">
+          <SecondaryButton onClick={onCancel}>Keep Transaction</SecondaryButton>
+          <PrimaryButton
+            className="bg-red-600 hover:bg-red-700"
+            disabled={!canVoid}
+            icon={<ShieldCheck size={17} />}
+            onClick={onComplete}
+          >
+            Confirm Void
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DiscountApprovalModal({
+  onCancel,
+  onApprove,
+}: {
+  onCancel: () => void;
+  onApprove: (approval: DiscountApproval) => void;
+}) {
+  const [amount, setAmount] = useState("500");
+  const [reason, setReason] = useState(discountReasons[0]);
+  const [managerPin, setManagerPin] = useState("");
+  const amountNumber = Number(amount || 0);
+  const canApprove = amountNumber > 0 && reason && managerPin.trim().length >= 4;
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onCancel]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-4">
+      <section className="w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-[#028FC1]">Manager approval</p>
+            <h2 className="mt-1 text-xl font-semibold">Apply manual discount</h2>
+          </div>
+          <IconButton icon={<X size={16} />} label="Close" onClick={onCancel} />
+        </div>
+        <div className="mt-5 grid gap-4">
+          <Field
+            label="Discount Amount"
+            required
+            value={amount}
+            onChange={setAmount}
+          />
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Discount Reason <span className="text-red-600">*</span></span>
+            <select
+              className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            >
+              {discountReasons.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <Field
+            label="Manager PIN"
+            placeholder="4+ digits"
+            required
+            value={managerPin}
+            onChange={setManagerPin}
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-3">
+          <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
+          <PrimaryButton
+            disabled={!canApprove}
+            icon={<ShieldCheck size={17} />}
+            onClick={() =>
+              onApprove({
+                amount: amountNumber,
+                reason,
+                manager: "Manager PIN verified",
+                approvedAt: "14:31",
+              })
+            }
+          >
+            Approve Discount
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SuspendSaleModal({
+  activeStudent,
+  cart,
+  onCancel,
+  onSuspend,
+}: {
+  activeStudent: Student;
+  cart: CartLine[];
+  onCancel: () => void;
+  onSuspend: (reason: string, note: string) => void;
+}) {
+  const [reason, setReason] = useState(suspendReasons[0]);
+  const [note, setNote] = useState("");
+  const requiresNote = reason === "Other";
+  const canSuspend = reason && (!requiresNote || note.trim().length > 1);
+  const totals = calculateTotals(cart);
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onCancel]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/40 px-4">
+      <section className="w-full max-w-xl rounded-lg border border-slate-200 bg-white p-5 shadow-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-[#028FC1]">Suspend sale</p>
+            <h2 className="mt-1 text-xl font-semibold">{activeStudent.name}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {cartItemCount(cart)} items | {money(totals.total)}
+            </p>
+          </div>
+          <IconButton icon={<X size={16} />} label="Close" onClick={onCancel} />
+        </div>
+        <div className="mt-5 grid gap-4">
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Reason <span className="text-red-600">*</span>
+            </span>
+            <select
+              className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            >
+              {suspendReasons.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Note {requiresNote && <span className="text-red-600">*</span>}
+            </span>
+            <textarea
+              className="mt-1 min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              placeholder="Optional detail for the next staff member"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="mt-5 flex justify-end gap-3">
+          <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
+          <PrimaryButton
+            disabled={!canSuspend}
+            icon={<PauseCircle size={17} />}
+            onClick={() => onSuspend(reason, note)}
+          >
+            Suspend Sale
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ScreenTitle({
+  eyebrow,
+  title,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p className="text-sm font-semibold text-[#028FC1]">{eyebrow}</p>
+        <h2 className="mt-1 text-3xl font-semibold tracking-tight">{title}</h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 py-2">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-semibold text-slate-900">{value}</span>
+    </div>
+  );
+}
+
+function ProfileList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <div className="mt-3 space-y-2">
+        {items.map((item) => (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm" key={item}>
+            {item}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StudentAlerts({ alerts }: { alerts: string[] }) {
+  if (alerts.length === 0) return null;
+  return (
+    <section className="mb-5 rounded-lg border border-amber-200 bg-white p-4">
+      <div className="flex items-center gap-2">
+        <AlertTriangle size={18} className="text-amber-700" />
+        <h3 className="font-semibold">Student Alerts</h3>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {alerts.map((alert) => (
+          <Badge key={alert} tone="amber">{alert}</Badge>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PromotionPanel({ promotions }: { promotions: string[] }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2">
+        <Tag size={17} className="text-[#028FC1]" />
+        <h3 className="font-semibold">Eligible Promotions</h3>
+      </div>
+      <div className="mt-3 space-y-2">
+        {promotions.length > 0 ? (
+          promotions.map((promotion) => (
+            <div className="rounded-md border border-sky-100 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-900" key={promotion}>
+              {promotion}
+            </div>
+          ))
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+            No eligible promotions for this student.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StudentTimeline({
+  events,
+}: {
+  events: Array<{ id: string; time: string; title: string; detail: string; status: string }>;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2">
+        <History size={17} className="text-[#028FC1]" />
+        <h3 className="font-semibold">Student Timeline</h3>
+      </div>
+      <div className="mt-4 space-y-3">
+        {events.length > 0 ? (
+          events.map((event) => (
+            <div className="grid grid-cols-[120px_1fr] gap-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm" key={event.id}>
+              <span className="text-xs font-semibold text-slate-500">{event.time}</span>
+              <span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{event.title}</span>
+                  <Badge tone={event.status.includes("failed") || event.status === "Cancelled" ? "red" : event.status.includes("Pending") || event.status.includes("Suspended") ? "amber" : "green"}>
+                    {event.status}
+                  </Badge>
+                </span>
+                <span className="mt-1 block text-slate-600">{event.detail}</span>
+              </span>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+            No timeline events yet.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PurchaseSection({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<TransactionItem & {
+    purchaseDate: string;
+    receiptId: string;
+    status: string;
+  }>;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">{title}</h3>
+        <Badge>{items.length}</Badge>
+      </div>
+      <div className="mt-3 space-y-2">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <div
+              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              key={`${item.receiptId}-${item.productId}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold">{item.name}</span>
+                <Badge tone={item.status === "Expired" ? "red" : item.status === "Upcoming Live Class" ? "amber" : "green"}>
+                  {item.status}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {item.type} | {item.purchaseDate} | {item.receiptId}
+              </p>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+            No items in this category.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>("home");
+  const [activeStudent, setActiveStudent] = useState<Student | null>(null);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [transactionHistory, setTransactionHistory] = useState<Transaction[]>(initialTransactions);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction>(initialTransactions[0]);
+  const [suspendedSales, setSuspendedSales] = useState<SuspendedSale[]>(initialSuspendedSales);
+  const [selectedSuspendedSale, setSelectedSuspendedSale] = useState<SuspendedSale>(initialSuspendedSales[0]);
+  const [selectedDeliveryAddress, setSelectedDeliveryAddress] = useState<DeliveryAddress | null>(null);
+  const [discountApproval, setDiscountApproval] = useState<DiscountApproval | null>(null);
+  const [discountModalOpen, setDiscountModalOpen] = useState(false);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ productName: string; purchaseDate: string; receiptId: string } | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(favoriteProductIds);
+  const [selectedBranch, setSelectedBranch] = useState(branchName);
+  const [lastCatalogFilter, setLastCatalogFilter] = useState("Favorites");
+  const [lastPaymentMethod, setLastPaymentMethod] = useState<PaymentMethod>("Cash");
+  const [recentlyViewedProductIds, setRecentlyViewedProductIds] = useState<string[]>([]);
+  const [saleNotice, setSaleNotice] = useState("");
+  const [lastReceipt, setLastReceipt] = useState("RC-260706-0189");
+  const [lastTotal, setLastTotal] = useState(0);
+  const pendingPayments = transactionHistory.filter((transaction) => transaction.status === "Pending Payment");
+  const activePromotions = eligiblePromotions(activeStudent, cart);
+  const recentlyViewedProducts = recentlyViewedProductIds
+    .map((id) => products.find((product) => product.id === id))
+    .filter((product): product is Product => Boolean(product));
+  const recentlySold = useMemo(() => recentSoldProducts(transactionHistory), [transactionHistory]);
+  const recommendations = useMemo(() => {
+    const cartProductIds = new Set(cart.map((line) => line.product.id));
+    const hasMath = cart.some((line) => line.product.subject === "Math");
+    const hasLiveClass = cart.some((line) => line.product.type === "Live Class");
+    const hasDigital = cart.some((line) => line.product.type === "Digital Course");
+    const suggestedIds = [
+      ...(hasMath ? ["P-612", "P-207"] : []),
+      ...(hasLiveClass ? ["P-318"] : []),
+      ...(hasDigital ? ["P-404", "P-612"] : []),
+    ];
+    return suggestedIds
+      .map((id) => products.find((product) => product.id === id))
+      .filter((product): product is Product => Boolean(product))
+      .filter((product, index, self) => self.findIndex((item) => item.id === product.id) === index)
+      .filter((product) => !cartProductIds.has(product.id));
+  }, [cart]);
+
+  function addToCart(product: Product) {
+    const duplicate = duplicatePurchaseForStudent(transactionHistory, activeStudent, product);
+    setDuplicateWarning(duplicate);
+    setRecentlyViewedProductIds((current) => [
+      product.id,
+      ...current.filter((id) => id !== product.id),
+    ].slice(0, 5));
+    setCart((current) => {
+      const existing = current.find((line) => line.product.id === product.id);
+      if (existing) {
+        return current.map((line) =>
+          line.lineId === existing.lineId ? { ...line, quantity: line.quantity + 1 } : line,
+        );
+      }
+      return [
+        ...current,
+        makeCartLine(product),
+      ];
+    });
+  }
+
+  function changeQuantity(lineId: string, direction: 1 | -1) {
+    setCart((current) =>
+      current.map((line) =>
+        line.lineId === lineId
+          ? { ...line, quantity: Math.max(1, line.quantity + direction) }
+          : line,
+      ),
+    );
+  }
+
+  function startNewSale() {
+    setActiveStudent(null);
+    setCart([]);
+    setSelectedDeliveryAddress(null);
+    setDiscountApproval(null);
+    setDuplicateWarning(null);
+    setSaleNotice("");
+    setScreen("home");
+  }
+
+  function selectStudentForSale(student: Student) {
+    setActiveStudent(student);
+    setSelectedDeliveryAddress(defaultDeliveryAddress(student));
+    setDuplicateWarning(null);
+    setSaleNotice("");
+    setScreen("student-profile");
+  }
+
+  function suspendSale(reason: string, note: string) {
+    if (!activeStudent || cart.length === 0) return;
+    const suspended: SuspendedSale = {
+      id: `SUS-${Date.now()}`,
+      date: "6 Jul 2026",
+      time: "14:32",
+      student: activeStudent,
+      cart,
+      discountApproval,
+      staff: staffName,
+      reason,
+      note,
+      status: "Suspended",
+    };
+    setSuspendedSales((current) => [suspended, ...current]);
+    setSelectedSuspendedSale(suspended);
+    setActiveStudent(null);
+    setCart([]);
+    setSelectedDeliveryAddress(null);
+    setDiscountApproval(null);
+    setDuplicateWarning(null);
+    setSuspendModalOpen(false);
+    setSaleNotice(`Sale suspended for ${activeStudent.name}.`);
+    setScreen("home");
+  }
+
+  function resumeSale(sale: SuspendedSale) {
+    setActiveStudent(sale.student);
+    setCart(sale.cart);
+    setSelectedDeliveryAddress(defaultDeliveryAddress(sale.student));
+    setDiscountApproval(sale.discountApproval);
+    setDuplicateWarning(null);
+    setSuspendedSales((current) => current.filter((item) => item.id !== sale.id));
+    setSaleNotice("");
+    setScreen("catalog");
+  }
+
+  function cancelSuspendedSale(sale: SuspendedSale) {
+    setSuspendedSales((current) => current.filter((item) => item.id !== sale.id));
+    setSaleNotice(`Suspended sale canceled for ${sale.student.name}.`);
+    setScreen("suspended-sales");
+  }
+
+  function proceedFromCart() {
+    if (!activeStudent || cart.length === 0) return;
+    if (!activeStudent.isNew && cartHasPhysicalBooks(cart) && !selectedDeliveryAddress) {
+      setSelectedDeliveryAddress(defaultDeliveryAddress(activeStudent));
+      setScreen("delivery-info");
+      return;
+    }
+    if (!activeStudent.isNew && cartHasPhysicalBooks(cart)) {
+      setScreen("delivery-info");
+      return;
+    }
+    setScreen("order-summary");
+  }
+
+  function completePayment(method: PaymentMethod) {
+    if (!activeStudent || cart.length === 0) return;
+    const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
+    const receiptNumber = `RC-260706-${String(190 + transactionHistory.length).padStart(4, "0")}`;
+    const transaction: Transaction = {
+      id: receiptNumber,
+      time: "14:33",
+      student: activeStudent.isNew ? `Walk-in: ${activeStudent.name}` : activeStudent.name,
+      studentId: activeStudent.isNew ? undefined : activeStudent.id,
+      grade: activeStudent.grade,
+      phone: activeStudent.phone,
+      staff: staffName,
+      method,
+      status: activeStudent.isNew ? "SMS sent" : "Paid",
+      total: totals.total,
+      items: cartToTransactionItems(cart),
+      discountApproval: discountApproval ?? undefined,
+      deliveryAddress: selectedDeliveryAddress,
+      promotionNames: activePromotions,
+    };
+    setTransactionHistory((current) => [transaction, ...current]);
+    setSelectedTransaction(transaction);
+    setLastTotal(totals.total);
+    setLastReceipt(receiptNumber);
+    setScreen("success");
+  }
+
+  function createPendingPayment(method: PaymentMethod) {
+    if (!activeStudent || cart.length === 0) return;
+    const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
+    const receiptNumber = `RC-260706-${String(200 + transactionHistory.length).padStart(4, "0")}`;
+    const transaction: Transaction = {
+      id: receiptNumber,
+      time: "14:34",
+      student: activeStudent.isNew ? `Walk-in: ${activeStudent.name}` : activeStudent.name,
+      studentId: activeStudent.isNew ? undefined : activeStudent.id,
+      grade: activeStudent.grade,
+      phone: activeStudent.phone,
+      staff: staffName,
+      method,
+      status: "Pending Payment",
+      total: totals.total,
+      items: cartToTransactionItems(cart),
+      discountApproval: discountApproval ?? undefined,
+      deliveryAddress: selectedDeliveryAddress,
+      promotionNames: activePromotions,
+    };
+    setTransactionHistory((current) => [transaction, ...current]);
+    setSelectedTransaction(transaction);
+    setSaleNotice(`QR payment generated for ${activeStudent.name}. Monitor it in Pending Payments.`);
+    setScreen("pending-payments");
+  }
+
+  function completePendingPayment(transaction: Transaction) {
+    const completedStatus: TransactionStatus = transaction.studentId ? "Paid" : "SMS sent";
+    const completed = { ...transaction, status: completedStatus };
+    setTransactionHistory((current) =>
+      current.map((item) => (item.id === transaction.id ? completed : item)),
+    );
+    setSelectedTransaction(completed);
+    setActiveStudent(studentFromTransaction(completed));
+    setCart(
+      completed.items
+        .map((item) => {
+          const product = productFromItem(item);
+          return product ? makeCartLine(product, item.quantity, item.discount) : null;
+        })
+        .filter((line): line is CartLine => Boolean(line)),
+    );
+    setSelectedDeliveryAddress(completed.deliveryAddress ?? null);
+    setLastTotal(completed.total);
+    setLastReceipt(completed.id);
+    setScreen("success");
+  }
+
+  function cancelPendingPayment(transaction: Transaction) {
+    const cancelled = { ...transaction, status: "Cancelled" as TransactionStatus };
+    setTransactionHistory((current) =>
+      current.map((item) => (item.id === transaction.id ? cancelled : item)),
+    );
+    setSelectedTransaction(cancelled);
+    setSaleNotice(`Pending payment cancelled for ${transaction.student}.`);
+    setScreen("pending-payments");
+  }
+
+  function resumePendingPayment(transaction: Transaction) {
+    const student = studentFromTransaction(transaction);
+    setActiveStudent(student);
+    setCart(
+      transaction.items
+        .map((item) => {
+          const product = productFromItem(item);
+          return product ? makeCartLine(product, item.quantity, item.discount) : null;
+        })
+        .filter((line): line is CartLine => Boolean(line)),
+    );
+    setSelectedDeliveryAddress(transaction.deliveryAddress ?? defaultDeliveryAddress(student));
+    setDiscountApproval(transaction.discountApproval ?? null);
+    setLastPaymentMethod("QR Payment");
+    setScreen("payment");
+  }
+
+  function duplicateSale(transaction: Transaction) {
+    const copiedCart = transaction.items
+      .map((item) => {
+        const product = productFromItem(item);
+        return product ? makeCartLine(product, item.quantity, item.discount) : null;
+      })
+      .filter((line): line is CartLine => Boolean(line));
+    setCart(copiedCart);
+    setActiveStudent(null);
+    setDiscountApproval(null);
+    setSaleNotice("Duplicate sale draft created. Select or create the student before checkout.");
+    setScreen("home");
+  }
+
+  function voidTransaction(transaction: Transaction) {
+    const voided = { ...transaction, status: "Voided" as TransactionStatus };
+    setSelectedTransaction(voided);
+    setTransactionHistory((current) =>
+      current.map((item) => (item.id === transaction.id ? voided : item)),
+    );
+    setScreen("transaction-detail");
+  }
+
+  const content = (() => {
+    switch (screen) {
+      case "home":
+        return (
+          <HomeScreen
+            branch={selectedBranch}
+            pendingPayments={pendingPayments}
+            saleNotice={saleNotice}
+            suspendedSales={suspendedSales}
+            transactions={transactionHistory}
+            onExisting={() => setScreen("student-search")}
+            onNew={() => setScreen("new-student")}
+            onPendingPayments={() => setScreen("pending-payments")}
+            onResumeSale={resumeSale}
+            onSuspendedSales={() => setScreen("suspended-sales")}
+            onTransactions={() => setScreen("transactions")}
+          />
+        );
+      case "student-search":
+        return (
+          <StudentSearchScreen
+            onBack={() => setScreen("home")}
+            onSelect={selectStudentForSale}
+          />
+        );
+      case "student-profile":
+        return activeStudent ? (
+          <StudentProfileScreen
+            student={activeStudent}
+            suspendedSales={suspendedSales}
+            transactions={transactionHistory}
+            onBack={() => setScreen("student-search")}
+            onCatalog={() => setScreen("catalog")}
+            onResumeSale={resumeSale}
+          />
+        ) : null;
+      case "new-student":
+        return (
+          <NewStudentScreen
+            onBack={() => setScreen("home")}
+            onCreate={(student) => {
+              setActiveStudent(student);
+              setScreen("catalog");
+            }}
+          />
+        );
+      case "catalog":
+        return (
+          <CatalogScreen
+            activeStudent={activeStudent}
+            cart={cart}
+            discountApproval={discountApproval}
+            duplicateWarning={duplicateWarning}
+            favoriteIds={favoriteIds}
+            lastFilter={lastCatalogFilter}
+            recentlyViewedProducts={recentlyViewedProducts}
+            recentlySold={recentlySold}
+            recommendations={recommendations}
+            promotions={activePromotions}
+            onAdd={addToCart}
+            onClearDiscount={() => setDiscountApproval(null)}
+            onFilterChange={setLastCatalogFilter}
+            onPayment={proceedFromCart}
+            onProfile={() => setScreen("student-profile")}
+            onQty={changeQuantity}
+            onRequestDiscount={() => setDiscountModalOpen(true)}
+            onRemove={(lineId) => setCart((current) => current.filter((line) => line.lineId !== lineId))}
+            onSuspend={() => setSuspendModalOpen(true)}
+            onToggleFavorite={(productId) =>
+              setFavoriteIds((current) =>
+                current.includes(productId)
+                  ? current.filter((id) => id !== productId)
+                  : [...current, productId],
+              )
+            }
+          />
+        );
+      case "delivery-info":
+        return activeStudent ? (
+          <DeliveryInfoScreen
+            selectedAddress={selectedDeliveryAddress}
+            student={activeStudent}
+            onBack={() => setScreen("catalog")}
+            onContinue={() => setScreen("order-summary")}
+            onSelectAddress={setSelectedDeliveryAddress}
+          />
+        ) : null;
+      case "order-summary":
+        return (
+          <OrderSummaryScreen
+            activeStudent={activeStudent}
+            cart={cart}
+            deliveryAddress={selectedDeliveryAddress}
+            discountApproval={discountApproval}
+            promotions={activePromotions}
+            onBack={() =>
+              activeStudent && !activeStudent.isNew && cartHasPhysicalBooks(cart)
+                ? setScreen("delivery-info")
+                : setScreen("catalog")
+            }
+            onContinue={() => setScreen("payment")}
+          />
+        );
+      case "payment":
+        return (
+          <PaymentScreen
+            activeStudent={activeStudent}
+            cart={cart}
+            deliveryAddress={selectedDeliveryAddress}
+            discountApproval={discountApproval}
+            lastPaymentMethod={lastPaymentMethod}
+            onBack={() => setScreen("order-summary")}
+            onPaymentMethodChange={setLastPaymentMethod}
+            onPendingPayment={createPendingPayment}
+            onSuccess={completePayment}
+          />
+        );
+      case "success":
+        return (
+          <SuccessScreen
+            activeStudent={activeStudent}
+            cart={cart}
+            receiptId={lastReceipt}
+            total={lastTotal}
+            onNewSale={startNewSale}
+            onProfile={() => setScreen("student-profile")}
+            onReceiptPreview={() => setScreen("receipt-preview")}
+          />
+        );
+      case "receipt-preview":
+        return (
+          <ReceiptPreviewScreen
+            activeStudent={activeStudent}
+            cart={cart}
+            deliveryAddress={selectedDeliveryAddress}
+            receiptId={lastReceipt}
+            total={lastTotal}
+            onBack={() => setScreen("success")}
+          />
+        );
+      case "suspended-sales":
+        return (
+          <SuspendedSalesScreen
+            suspendedSales={suspendedSales}
+            onBack={() => setScreen("home")}
+            onCancelSale={cancelSuspendedSale}
+            onOpenDetail={(sale) => {
+              setSelectedSuspendedSale(sale);
+              setScreen("suspended-detail");
+            }}
+            onResumeSale={resumeSale}
+          />
+        );
+      case "pending-payments":
+        return (
+          <PendingPaymentsScreen
+            transactions={transactionHistory}
+            onBack={() => setScreen("home")}
+            onCancelPayment={cancelPendingPayment}
+            onCompletePayment={completePendingPayment}
+            onResumePayment={resumePendingPayment}
+          />
+        );
+      case "suspended-detail":
+        return (
+          <SuspendedSaleDetailScreen
+            sale={selectedSuspendedSale}
+            onBack={() => setScreen("suspended-sales")}
+            onCancelSale={cancelSuspendedSale}
+            onResumeSale={resumeSale}
+          />
+        );
+      case "transactions":
+        return (
+          <TransactionsScreen
+            transactions={transactionHistory}
+            onBack={() => setScreen("home")}
+            onOpen={(transaction) => {
+              setSelectedTransaction(transaction);
+              setScreen("transaction-detail");
+            }}
+          />
+        );
+      case "transaction-detail":
+        return (
+          <TransactionDetailScreen
+            transaction={selectedTransaction}
+            onBack={() => setScreen("transactions")}
+            onDuplicate={() => duplicateSale(selectedTransaction)}
+            onVoid={() => setScreen("void-flow")}
+          />
+        );
+      case "void-flow":
+        return (
+          <VoidFlowScreen
+            transaction={selectedTransaction}
+            onCancel={() => setScreen("transaction-detail")}
+            onComplete={() => voidTransaction(selectedTransaction)}
+          />
+        );
+      default:
+        return null;
+    }
+  })();
+
+  return (
+    <main className="min-h-screen bg-[#f5f7f9] text-slate-950 md:pb-10">
+      <Header
+        activeStudent={activeStudent}
+        branch={selectedBranch}
+        cartCount={cart.reduce((sum, line) => sum + line.quantity, 0)}
+        pendingCount={pendingPayments.length}
+        suspendedCount={suspendedSales.length}
+        suspendedSales={suspendedSales}
+        transactions={transactionHistory}
+        onBranchChange={setSelectedBranch}
+        onHome={startNewSale}
+        onPendingPayments={() => setScreen("pending-payments")}
+        onProductSelect={(product) => {
+          addToCart(product);
+          setSaleNotice(activeStudent ? "" : "Product added. Select or create a student before checkout.");
+          setScreen(activeStudent ? "catalog" : "home");
+        }}
+        onStudentSelect={selectStudentForSale}
+        onTransactionSelect={(transaction) => {
+          setSelectedTransaction(transaction);
+          setScreen("transaction-detail");
+        }}
+        onSuspendedSales={() => setScreen("suspended-sales")}
+        onSuspendedSaleSelect={(sale) => {
+          setSelectedSuspendedSale(sale);
+          setScreen("suspended-detail");
+        }}
+        onTransactions={() => setScreen("transactions")}
+      />
+      {activeStudent && (screen === "catalog" || screen === "payment" || screen === "order-summary" || screen === "delivery-info") && (
+        <StudentBanner student={activeStudent} />
+      )}
+      {content}
+      {discountModalOpen && (
+        <DiscountApprovalModal
+          onApprove={(approval) => {
+            setDiscountApproval(approval);
+            setDiscountModalOpen(false);
+          }}
+          onCancel={() => setDiscountModalOpen(false)}
+        />
+      )}
+      {suspendModalOpen && activeStudent && (
+        <SuspendSaleModal
+          activeStudent={activeStudent}
+          cart={cart}
+          onCancel={() => setSuspendModalOpen(false)}
+          onSuspend={suspendSale}
+        />
+      )}
+      <SystemStatus branch={selectedBranch} />
+    </main>
+  );
+}
