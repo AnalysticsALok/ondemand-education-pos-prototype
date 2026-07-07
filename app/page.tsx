@@ -1366,8 +1366,8 @@ function CartPanel({
   const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
 
   return (
-    <aside className="sticky top-[136px] max-h-[calc(100vh-170px)] overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 p-4">
+    <aside className="flex h-[calc(100vh-132px)] min-h-[520px] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white xl:sticky xl:top-[118px] xl:h-[calc(100vh-142px)]">
+      <div className="shrink-0 border-b border-slate-200 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Current sale</h2>
           <Badge>{cart.length} lines</Badge>
@@ -1375,6 +1375,9 @@ function CartPanel({
         <p className="mt-1 text-sm text-slate-500">
           Assigned to {activeStudent?.name ?? "selected student"} by default.
         </p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4">
         {cartHasPhysicalBooks(cart) && (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <div className="flex items-start gap-2">
@@ -1397,98 +1400,100 @@ function CartPanel({
             </div>
           </div>
         )}
-      </div>
 
-      <div className="max-h-[310px] overflow-auto px-4">
-        {cart.length === 0 ? (
-          <div className="py-10 text-center text-sm text-slate-500">
-            Add a product to start the sale.
-          </div>
-        ) : (
-          cart.map((line) => (
-            <div className="border-b border-slate-100 py-4 last:border-0" key={line.lineId}>
-              <div className="flex justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{line.product.name}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {line.product.type} | {activeStudent?.id ?? "No student"}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold">{money(line.product.price * line.quantity)}</p>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconButton
-                    disabled={line.quantity === 1}
-                    icon={<Minus size={15} />}
-                    label="Decrease quantity"
-                    onClick={() => onQty(line.lineId, -1)}
-                  />
-                  <span className="w-7 text-center text-sm font-semibold">{line.quantity}</span>
-                  <IconButton
-                    icon={<Plus size={15} />}
-                    label="Increase quantity"
-                    onClick={() => onQty(line.lineId, 1)}
-                  />
-                </div>
-                <IconButton
-                  icon={<Trash2 size={15} />}
-                  label="Remove item"
-                  onClick={() => onRemove(line.lineId)}
-                />
-              </div>
+        <div className="mt-3">
+          {cart.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 py-10 text-center text-sm text-slate-500">
+              Add a product to start the sale.
             </div>
-          ))
-        )}
-      </div>
-
-      <div className="border-t border-slate-200 p-4">
-        <div className="flex items-center gap-2">
-          <Tag size={16} className="text-[#028FC1]" />
-          <h3 className="text-sm font-semibold">Recommended add-ons</h3>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {cart.map((line) => (
+                <div className="border-b border-slate-100 py-4 last:border-0" key={line.lineId}>
+                  <div className="flex justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{line.product.name}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {line.product.type} | {activeStudent?.id ?? "No student"}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold">{money(line.product.price * line.quantity)}</p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <IconButton
+                        disabled={line.quantity === 1}
+                        icon={<Minus size={15} />}
+                        label="Decrease quantity"
+                        onClick={() => onQty(line.lineId, -1)}
+                      />
+                      <span className="w-7 text-center text-sm font-semibold">{line.quantity}</span>
+                      <IconButton
+                        icon={<Plus size={15} />}
+                        label="Increase quantity"
+                        onClick={() => onQty(line.lineId, 1)}
+                      />
+                    </div>
+                    <IconButton
+                      icon={<Trash2 size={15} />}
+                      label="Remove item"
+                      onClick={() => onRemove(line.lineId)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {recommendations.length > 0 ? (
-          <div className="mt-3 space-y-2">
-            {recommendations.slice(0, 2).map((product) => (
-              <button
-                className="flex w-full items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 text-left text-sm hover:border-[#028FC1]"
-                key={product.id}
-                onClick={() => onAdd(product)}
-              >
-                <span>
-                  <span className="block font-semibold">{product.name}</span>
-                  <span className="text-xs text-slate-500">{product.detail}</span>
-                </span>
-                <Plus size={15} className="shrink-0 text-[#028FC1]" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
-            Add a course or book to see relevant add-ons.
-          </p>
-        )}
-      </div>
 
-      <div className="border-t border-slate-200 p-4">
-        <div className="flex items-center gap-2">
-          <Tag size={16} className="text-[#028FC1]" />
-          <h3 className="text-sm font-semibold">Eligible Promotions</h3>
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <div className="flex items-center gap-2">
+            <Tag size={16} className="text-[#028FC1]" />
+            <h3 className="text-sm font-semibold">Recommended add-ons</h3>
+          </div>
+          {recommendations.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {recommendations.slice(0, 2).map((product) => (
+                <button
+                  className="flex w-full items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 text-left text-sm hover:border-[#028FC1]"
+                  key={product.id}
+                  onClick={() => onAdd(product)}
+                >
+                  <span>
+                    <span className="block font-semibold">{product.name}</span>
+                    <span className="text-xs text-slate-500">{product.detail}</span>
+                  </span>
+                  <Plus size={15} className="shrink-0 text-[#028FC1]" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+              Add a course or book to see relevant add-ons.
+            </p>
+          )}
         </div>
-        {promotions.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {promotions.map((promotion) => (
-              <Badge key={promotion} tone="sky">{promotion}</Badge>
-            ))}
+
+        <div className="mt-4 border-t border-slate-200 pb-4 pt-4">
+          <div className="flex items-center gap-2">
+            <Tag size={16} className="text-[#028FC1]" />
+            <h3 className="text-sm font-semibold">Eligible Promotions</h3>
           </div>
-        ) : (
-          <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
-            No eligible promotions for this cart yet.
-          </p>
-        )}
+          {promotions.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {promotions.map((promotion) => (
+                <Badge key={promotion} tone="sky">{promotion}</Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+              No eligible promotions for this cart yet.
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="border-t border-slate-200 p-4 text-sm">
+      <div className="shrink-0 border-t border-slate-200 bg-white p-4 text-sm shadow-[0_-10px_24px_rgba(15,23,42,0.06)]">
         <div className="flex justify-between py-1">
           <span>Subtotal</span>
           <span>{money(totals.subtotal)}</span>
