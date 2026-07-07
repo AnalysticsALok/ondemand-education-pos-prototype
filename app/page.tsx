@@ -25,6 +25,7 @@ import {
   ReceiptText,
   RotateCcw,
   Search,
+  Settings,
   ShieldCheck,
   Signal,
   ShoppingCart,
@@ -54,6 +55,7 @@ type Screen =
   | "suspended-sales"
   | "suspended-detail"
   | "pending-payments"
+  | "demo-tools"
   | "order-summary"
   | "delivery-info"
   | "receipt-preview";
@@ -160,9 +162,9 @@ type SuspendedSale = {
 const staffName = "Arisa K.";
 const branchName = "Siam Branch";
 const currentTime = "6 Jul 2026, 14:28";
-const branchOptions = ["Siam Branch", "Central Ladprao Branch", "Mega Bangna Branch"];
+const branchOptions = ["Siam Branch"];
 
-const students: Student[] = [
+const baseStudents: Student[] = [
   {
     id: "STU-2401829",
     name: "Pimchanok Wongsa",
@@ -252,7 +254,7 @@ const students: Student[] = [
   },
 ];
 
-const products: Product[] = [
+const baseProducts: Product[] = [
   {
     id: "P-101",
     name: "A-Level Math Intensive",
@@ -330,7 +332,31 @@ const products: Product[] = [
   },
 ];
 
-const initialTransactions: Transaction[] = [
+const demoScenarios = ["Normal Day", "Promotion Week", "Exam Season", "Open House", "Heavy Branch Traffic"] as const;
+type DemoScenario = (typeof demoScenarios)[number];
+
+const thaiFirstNames = [
+  "Achiraya", "Anongnart", "Benjawan", "Chayanit", "Chananchida", "Darika", "Kanyarat", "Kittipat",
+  "Kornkanok", "Lalita", "Methinee", "Naphat", "Narin", "Nattapong", "Nichakorn", "Pannawat",
+  "Patteera", "Phakphum", "Pimchanok", "Ploypailin", "Ratchanon", "Sirawit", "Sirin", "Supitcha",
+  "Tanakorn", "Thanawat", "Thitiporn", "Warangkana", "Worawit", "Yingyot",
+];
+const thaiLastNames = [
+  "Ariyaphan", "Boonmee", "Chaiyapruk", "Dechakul", "Intarachot", "Jirawat", "Kanjanaporn",
+  "Lertpanya", "Maneewan", "Nakornchai", "Phromsak", "Rattanakul", "Saengchan", "Srisai",
+  "Sukhum", "Tangtrakul", "Teerawat", "Thanapaisal", "Vongvanich", "Wongsa",
+];
+const bangkokSchools = [
+  "Triam Udom Suksa", "Satit Chula", "Assumption College", "Mater Dei School", "Bangkok Christian College",
+  "Suankularb Wittayalai", "Saint Joseph Convent", "Debsirin School", "Bodindecha School",
+  "Samsenwittayalai School", "Horwang School", "Yothinburana School", "St. Gabriel's College",
+  "Triam Udom Suksa Pattanakarn", "Kasetsart University Laboratory School",
+];
+
+const products = createDemoProducts(baseProducts);
+const students = createDemoStudents(baseStudents, products);
+
+const baseTransactions: Transaction[] = [
   {
     id: "RC-260706-0188",
     time: "14:16",
@@ -462,6 +488,8 @@ const initialTransactions: Transaction[] = [
   },
 ];
 
+const initialTransactions = createDemoTransactions(baseTransactions, students, products, "Normal Day");
+
 const filters = [
   "Favorites",
   "Recently Viewed",
@@ -502,6 +530,220 @@ const suspendReasons = [
 ];
 
 const favoriteProductIds = ["P-101", "P-318", "P-207", "P-404"];
+
+function createDemoProducts(seedProducts: Product[]) {
+  const subjects = ["Math", "Physics", "Chemistry", "Biology", "English", "Thai", "Social", "TGAT", "TPAT", "A-Level"];
+  const types: ProductType[] = ["Digital Course", "Book", "Live Class", "E-book"];
+  const tones = [
+    "from-sky-600 to-cyan-500", "from-emerald-600 to-teal-500", "from-amber-500 to-orange-500",
+    "from-violet-600 to-fuchsia-500", "from-rose-600 to-pink-500", "from-slate-700 to-slate-500",
+  ];
+  const generated = Array.from({ length: 44 }, (_, index) => {
+    const type = types[index % types.length];
+    const subject = subjects[index % subjects.length];
+    const gradeNumber = 4 + (index % 9);
+    const grade = `Grade ${gradeNumber}`;
+    const suffix =
+      type === "Book"
+        ? "Workbook"
+        : type === "E-book"
+          ? "Concept E-book"
+          : type === "Live Class"
+            ? "Weekend Live Class"
+            : "OnDemand Course";
+    const prefix = type === "Digital Course" ? "DC" : type === "Book" ? "BK" : type === "E-book" ? "EB" : "LC";
+    const price =
+      type === "Book"
+        ? 590 + (index % 5) * 180
+        : type === "E-book"
+          ? 990 + (index % 6) * 250
+          : type === "Live Class"
+            ? 8500 + (index % 7) * 1700
+            : 5900 + (index % 8) * 1200;
+    return {
+      id: `P-${700 + index}`,
+      name: `${subject} ${grade} ${suffix}`,
+      type,
+      subject,
+      grade,
+      sku: `${prefix}-${subject.slice(0, 3).toUpperCase()}-${String(gradeNumber).padStart(2, "0")}-${index + 1}`,
+      price,
+      availability: type === "Book" ? "Delivery required" : type === "Live Class" ? `${4 + (index % 12)} seats remaining` : "Instant access",
+      detail: type === "Book" ? "Central delivery after purchase" : type === "Live Class" ? `Starts ${18 + (index % 10)} Jul 2026` : "SMS activation after payment",
+      warning: type === "Book" ? "Book delivery" : type === "Live Class" && index % 5 === 0 ? "Low seats" : undefined,
+      imageTone: tones[index % tones.length],
+    } satisfies Product;
+  });
+  return [...seedProducts, ...generated];
+}
+
+function createDemoStudents(seedStudents: Student[], catalog: Product[]) {
+  const generated = Array.from({ length: 97 }, (_, index) => {
+    const name = `${thaiFirstNames[index % thaiFirstNames.length]} ${thaiLastNames[(index * 3) % thaiLastNames.length]}`;
+    const grade = `Grade ${4 + (index % 9)}`;
+    const studentProducts = catalog.filter((product) => product.grade === grade).slice(0, 2);
+    const alerts = [
+      ...(index % 11 === 0 ? ["Suspended sale exists"] : []),
+      ...(index % 13 === 0 ? ["SMS failed"] : []),
+      ...(index % 17 === 0 ? ["Parent requested callback"] : []),
+      ...(index % 19 === 0 ? ["Outstanding balance"] : []),
+      ...(index % 23 === 0 ? ["Upcoming Live Class"] : []),
+      ...(index % 29 === 0 ? ["Course expires soon"] : []),
+    ];
+    const promotions = [
+      "Student Member Discount",
+      ...(Number(grade.replace("Grade ", "")) >= 10 ? ["Exam Season Booster"] : ["Foundation Course Bundle"]),
+      ...(index % 3 === 0 ? ["Buy Course + Book Promotion"] : []),
+      ...(index % 5 === 0 ? ["Siam Branch Family Offer"] : []),
+      ...(grade === "Grade 12" ? ["A-Level Final Sprint"] : []),
+    ];
+    return {
+      id: `STU-${String(2600000 + index * 37).padStart(7, "0")}`,
+      name,
+      grade,
+      phone: `08${index % 10}-${String(120 + index).padStart(3, "0")}-${String(4300 + index * 23).slice(-4)}`,
+      parent: index % 4 === 0 ? `${thaiFirstNames[(index + 5) % thaiFirstNames.length]} ${thaiLastNames[(index * 3) % thaiLastNames.length]}` : "Not provided",
+      parentPhone: index % 4 === 0 ? `09${index % 10}-${String(220 + index).padStart(3, "0")}-${String(5100 + index * 19).slice(-4)}` : undefined,
+      school: bangkokSchools[index % bangkokSchools.length],
+      courses: studentProducts.map((product) => product.name),
+      purchases: index % 7 === 0 ? [`RC-260705-${String(900 + index).padStart(4, "0")}`] : [],
+      promotions,
+      alerts,
+      deliveryAddresses: [
+        {
+          id: `ADDR-${String(1000 + index)}`,
+          label: "Default home",
+          recipient: name,
+          phone: `08${index % 10}-${String(120 + index).padStart(3, "0")}-${String(4300 + index * 23).slice(-4)}`,
+          address: `${20 + index}/${2 + (index % 40)} ${["Rama I Road", "Phaya Thai Road", "Sukhumvit Road", "Phetchaburi Road", "Silom Road"][index % 5]}, Bangkok 10${String(300 + (index % 50)).slice(-3)}`,
+          method: "Central delivery service",
+          estimate: "2-4 business days",
+          isDefault: true,
+        },
+      ],
+      activity: [
+        index % 6 === 0 ? "Returning student at Siam Branch" : "Active Siam Branch student",
+        index % 10 === 0 ? "High-value parent purchase history" : "Profile verified",
+      ],
+      isNew: index % 31 === 0,
+    } satisfies Student;
+  });
+  return [...seedStudents, ...generated];
+}
+
+function createTransactionFromSeed(index: number, student: Student, catalog: Product[], scenario: DemoScenario): Transaction {
+  const matching = catalog.filter((product) => product.grade === student.grade);
+  const first = matching[index % Math.max(matching.length, 1)] ?? catalog[index % catalog.length];
+  const second = catalog[(index * 7) % catalog.length];
+  const items = [first, ...(index % 4 === 0 ? [second] : [])].map((product) => ({
+    productId: product.id,
+    name: product.name,
+    type: product.type,
+    quantity: 1,
+    price: product.price,
+    discount: product.price >= 8000 || scenario === "Promotion Week" ? 500 : 0,
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity - item.discount, 0);
+  const status: TransactionStatus =
+    index % 23 === 0
+      ? "Pending Payment"
+      : index % 37 === 0
+        ? "Voided"
+        : index % 41 === 0
+          ? "Cancelled"
+          : student.isNew
+            ? "SMS sent"
+            : "Paid";
+  const method: PaymentMethod = index % 3 === 0 ? "QR Payment" : index % 3 === 1 ? "Credit Card" : "Cash";
+  const day = 6 - (index % 8);
+  const hour = 10 + (index % 8);
+  const minute = (index * 7) % 60;
+  return {
+    id: `RC-2607${String(Math.max(day, 1)).padStart(2, "0")}-${String(2000 + index).padStart(4, "0")}`,
+    time: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    student: student.isNew ? `Walk-in: ${student.name.split(" ")[0]}` : student.name,
+    studentId: student.isNew ? undefined : student.id,
+    grade: student.grade,
+    phone: student.phone,
+    staff: ["Arisa K.", "Narin P.", "Supaporn M.", "Krit S."][index % 4],
+    method,
+    status,
+    total: Math.round(subtotal * 1.07),
+    items,
+    deliveryAddress: items.some((item) => item.type === "Book") && !student.isNew ? student.deliveryAddresses[0] : undefined,
+    promotionNames: scenario === "Promotion Week" || index % 5 === 0 ? student.promotions.slice(0, 2) : undefined,
+  };
+}
+
+function createDemoTransactions(seedTransactions: Transaction[], roster: Student[], catalog: Product[], scenario: DemoScenario) {
+  const scenarioVolume: Record<DemoScenario, number> = {
+    "Normal Day": 300,
+    "Promotion Week": 330,
+    "Exam Season": 360,
+    "Open House": 285,
+    "Heavy Branch Traffic": 420,
+  };
+  const target = scenarioVolume[scenario] - seedTransactions.length;
+  const generated = Array.from({ length: Math.max(target, 0) }, (_, index) =>
+    createTransactionFromSeed(index, roster[index % roster.length], catalog, scenario),
+  );
+  return [...seedTransactions, ...generated];
+}
+
+function createDemoSuspendedSales(seedSales: SuspendedSale[], roster: Student[], catalog: Product[], scenario: DemoScenario) {
+  const countByScenario: Record<DemoScenario, number> = {
+    "Normal Day": 9,
+    "Promotion Week": 14,
+    "Exam Season": 16,
+    "Open House": 11,
+    "Heavy Branch Traffic": 22,
+  };
+  const reasons = suspendReasons;
+  const generated = Array.from({ length: countByScenario[scenario] }, (_, index) => {
+    const student = roster[(index * 11 + 4) % roster.length];
+    const product = catalog[(index * 5 + 2) % catalog.length];
+    const addOn = catalog[(index * 7 + 8) % catalog.length];
+    return {
+      id: `SUS-260706-${String(100 + index)}`,
+      date: "6 Jul 2026",
+      time: `${String(10 + (index % 7)).padStart(2, "0")}:${String((index * 9) % 60).padStart(2, "0")}`,
+      student,
+      cart: [makeDemoCartLine(product, index), ...(index % 3 === 0 ? [makeDemoCartLine(addOn, index + 50)] : [])],
+      discountApproval: index % 4 === 0 ? {
+        amount: 1000,
+        reason: "Bundle adjustment",
+        manager: "Manager PIN verified",
+        approvedAt: "13:20",
+      } : null,
+      staff: ["Arisa K.", "Narin P.", "Supaporn M."][index % 3],
+      reason: reasons[index % reasons.length],
+      note: [
+        "Parent will confirm schedule by phone.",
+        "Customer is checking QR payment limit.",
+        "Waiting for manager confirmation.",
+        "Customer will return after school.",
+      ][index % 4],
+      status: "Suspended" as const,
+    };
+  });
+  return [...seedSales, ...generated];
+}
+
+function buildDemoDataset(scenario: DemoScenario) {
+  return {
+    transactions: createDemoTransactions(baseTransactions, students, products, scenario),
+    suspendedSales: createDemoSuspendedSales(baseSuspendedSales, students, products, scenario),
+  };
+}
+
+function makeDemoCartLine(product: Product, salt: number, quantity = 1): CartLine {
+  return {
+    lineId: `${product.id}-demo-${salt}`,
+    product,
+    quantity,
+    discount: product.price >= 10000 ? 500 : 0,
+  };
+}
 
 function makeCartLine(product: Product, quantity = 1, discount?: number): CartLine {
   return {
@@ -736,7 +978,7 @@ function recentSoldProducts(transactions: Transaction[]) {
     .slice(0, 4);
 }
 
-const initialSuspendedSales: SuspendedSale[] = [
+const baseSuspendedSales: SuspendedSale[] = [
   {
     id: "SUS-260706-004",
     date: "6 Jul 2026",
@@ -796,6 +1038,8 @@ const initialSuspendedSales: SuspendedSale[] = [
     status: "Suspended",
   },
 ];
+
+const initialSuspendedSales = createDemoSuspendedSales(baseSuspendedSales, students, products, "Normal Day");
 
 function money(value: number) {
   return new Intl.NumberFormat("th-TH", {
@@ -1229,6 +1473,7 @@ function Header({
   onHome,
   onBranchChange,
   onPendingPayments,
+  onDemoTools,
   onSuspendedSales,
   onSuspendedSaleSelect,
   onTransactions,
@@ -1246,6 +1491,7 @@ function Header({
   onHome: () => void;
   onBranchChange: (branch: string) => void;
   onPendingPayments: () => void;
+  onDemoTools: () => void;
   onSuspendedSales: () => void;
   onSuspendedSaleSelect: (sale: SuspendedSale) => void;
   onTransactions: () => void;
@@ -1322,6 +1568,7 @@ function Header({
             <History size={16} />
             Recent
           </button>
+          <IconButton icon={<Settings size={15} />} label="Demo Tools" onClick={onDemoTools} />
           <span className="hidden md:inline">Staff: {staffName}</span>
           <span className="hidden h-5 w-px bg-slate-200 md:inline" />
           <span className="hidden md:inline">{currentTime}</span>
@@ -3648,6 +3895,103 @@ function PurchaseSection({
   );
 }
 
+function DemoToolsScreen({
+  scenario,
+  transactions,
+  suspendedSales,
+  onBack,
+  onScenarioChange,
+  onReset,
+  onSeedTransactions,
+  onSeedStudents,
+  onSeedPending,
+  onSeedSuspended,
+}: {
+  scenario: DemoScenario;
+  transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
+  onBack: () => void;
+  onScenarioChange: (scenario: DemoScenario) => void;
+  onReset: () => void;
+  onSeedTransactions: () => void;
+  onSeedStudents: () => void;
+  onSeedPending: () => void;
+  onSeedSuspended: () => void;
+}) {
+  const pendingCount = transactions.filter((transaction) => transaction.status === "Pending Payment").length;
+  const voidedCount = transactions.filter((transaction) => transaction.status === "Voided").length;
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
+        eyebrow="Settings"
+        title="Demo Tools"
+      />
+      <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-5">
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold">Scenario Switcher</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Swap the Siam Branch dataset while preserving the same POS interface.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {demoScenarios.map((item) => (
+                <button
+                  className={`rounded-md border px-4 py-3 text-left text-sm font-semibold ${
+                    scenario === item
+                      ? "border-[#028FC1] bg-sky-50 text-[#027da9]"
+                      : "border-slate-200 bg-white text-slate-800 hover:border-[#028FC1]"
+                  }`}
+                  key={item}
+                  onClick={() => onScenarioChange(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold">Seed Controls</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Use these controls to restore or reseed operational queues during stakeholder demos.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <PrimaryButton icon={<RotateCcw size={17} />} onClick={onReset}>Reset Demo Data</PrimaryButton>
+              <SecondaryButton icon={<RotateCcw size={17} />} onClick={() => onScenarioChange(scenario)}>Generate Fresh Demo Data</SecondaryButton>
+              <SecondaryButton icon={<ReceiptText size={17} />} onClick={onSeedTransactions}>Seed Transactions</SecondaryButton>
+              <SecondaryButton icon={<User size={17} />} onClick={onSeedStudents}>Seed Students</SecondaryButton>
+              <SecondaryButton icon={<QrCode size={17} />} onClick={onSeedPending}>Seed Pending Payments</SecondaryButton>
+              <SecondaryButton icon={<PauseCircle size={17} />} onClick={onSeedSuspended}>Seed Suspended Sales</SecondaryButton>
+            </div>
+          </div>
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 className="font-semibold">Siam Branch Dataset</h3>
+            <div className="mt-4 grid gap-3 text-sm">
+              <Info label="Students" value={`${students.length} realistic records`} />
+              <Info label="Products" value={`${products.length} catalog items`} />
+              <Info label="Transactions" value={`${transactions.length} seeded records`} />
+              <Info label="Pending QR" value={`${pendingCount} records`} />
+              <Info label="Voided" value={`${voidedCount} records`} />
+              <Info label="Suspended Sales" value={`${suspendedSales.length} queue records`} />
+            </div>
+          </div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+            <h3 className="font-semibold">Branch Scope</h3>
+            <p className="mt-2 leading-6">
+              Demo data is generated only for Siam Branch. Other branches are intentionally unavailable in this prototype.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </div>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [activeStudent, setActiveStudent] = useState<Student | null>(null);
@@ -3669,6 +4013,7 @@ export default function App() {
   const [saleNotice, setSaleNotice] = useState("");
   const [lastReceipt, setLastReceipt] = useState("RC-260706-0189");
   const [lastTotal, setLastTotal] = useState(0);
+  const [demoScenario, setDemoScenario] = useState<DemoScenario>("Normal Day");
   const pendingPayments = transactionHistory.filter((transaction) => transaction.status === "Pending Payment");
   const activePromotions = eligiblePromotions(activeStudent, cart);
   const recentlyViewedProducts = recentlyViewedProductIds
@@ -3923,6 +4268,47 @@ export default function App() {
     setScreen("transaction-detail");
   }
 
+  function applyDemoScenario(scenario: DemoScenario) {
+    const dataset = buildDemoDataset(scenario);
+    setDemoScenario(scenario);
+    setTransactionHistory(dataset.transactions);
+    setSuspendedSales(dataset.suspendedSales);
+    setSelectedTransaction(dataset.transactions[0]);
+    setSelectedSuspendedSale(dataset.suspendedSales[0]);
+    setActiveStudent(null);
+    setCart([]);
+    setSelectedDeliveryAddress(null);
+    setDiscountApproval(null);
+    setDuplicateWarning(null);
+    setSaleNotice(`${scenario} demo data loaded for Siam Branch.`);
+  }
+
+  function resetDemoData() {
+    applyDemoScenario("Normal Day");
+  }
+
+  function seedTransactions() {
+    const seeded = createDemoTransactions([], students, products, demoScenario);
+    setTransactionHistory(seeded);
+    setSelectedTransaction(seeded[0]);
+    setSaleNotice(`${seeded.length} Siam Branch transactions seeded.`);
+  }
+
+  function seedPendingPayments() {
+    const pending = createDemoTransactions([], students, products, "Heavy Branch Traffic")
+      .filter((transaction) => transaction.status === "Pending Payment")
+      .slice(0, 18);
+    setTransactionHistory((current) => [...pending, ...current.filter((transaction) => transaction.status !== "Pending Payment")]);
+    setSaleNotice(`${pending.length} pending QR payments seeded.`);
+  }
+
+  function seedSuspendedSales() {
+    const seeded = createDemoSuspendedSales([], students, products, demoScenario);
+    setSuspendedSales(seeded);
+    setSelectedSuspendedSale(seeded[0]);
+    setSaleNotice(`${seeded.length} suspended sale cases seeded.`);
+  }
+
   const content = (() => {
     switch (screen) {
       case "home":
@@ -4123,6 +4509,21 @@ export default function App() {
             onComplete={() => voidTransaction(selectedTransaction)}
           />
         );
+      case "demo-tools":
+        return (
+          <DemoToolsScreen
+            scenario={demoScenario}
+            suspendedSales={suspendedSales}
+            transactions={transactionHistory}
+            onBack={() => setScreen("home")}
+            onReset={resetDemoData}
+            onScenarioChange={applyDemoScenario}
+            onSeedPending={seedPendingPayments}
+            onSeedStudents={() => setSaleNotice(`${students.length} Siam Branch student records are already loaded.`)}
+            onSeedSuspended={seedSuspendedSales}
+            onSeedTransactions={seedTransactions}
+          />
+        );
       default:
         return null;
     }
@@ -4139,6 +4540,7 @@ export default function App() {
         suspendedSales={suspendedSales}
         transactions={transactionHistory}
         onBranchChange={setSelectedBranch}
+        onDemoTools={() => setScreen("demo-tools")}
         onHome={startNewSale}
         onPendingPayments={() => setScreen("pending-payments")}
         onProductSelect={(product) => {

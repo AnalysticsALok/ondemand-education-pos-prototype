@@ -99,3 +99,16 @@
 - Added OnDemand-branded favicon and removed unused starter public assets.
 - Applied safe `npm audit fix`; remaining production advisory is tied to Next.js transitive PostCSS and cannot be fixed without npm's suggested breaking downgrade.
 - Verified production start on port 3001 after build.
+
+## Milestone 8 - Siam Branch Demo Data Engine
+
+- Added deterministic Demo Data Engine for stakeholder demo realism.
+- Expanded Siam Branch students to approximately 100 realistic Thai student records across Grades 4-12.
+- Expanded product catalog to approximately 50 realistic education products across digital courses, books, e-books, and live classes.
+- Seeded approximately 300 Normal Day Siam Branch transactions with completed, pending payment, voided, cancelled, and SMS-sent states.
+- Added scenario switching for Normal Day, Promotion Week, Exam Season, Open House, and Heavy Branch Traffic.
+- Added scenario-specific suspended sale queue volumes and pending QR payment examples.
+- Added hidden Demo Tools screen from Settings.
+- Added Demo Tools actions for reset, fresh generation, scenario switching, transaction seeding, student seeding, pending payment seeding, and suspended sale seeding.
+- Restricted branch selector to Siam Branch only for this stakeholder demo scope.
+- Verified `npm run lint` and `npm run build` after implementation.
