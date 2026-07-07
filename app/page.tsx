@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Copy,
   CreditCard,
+  LayoutDashboard,
   Download,
   FileText,
   History,
@@ -43,6 +44,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type Screen =
   | "home"
+  | "dashboard"
   | "student-search"
   | "student-profile"
   | "new-student"
@@ -52,6 +54,7 @@ type Screen =
   | "transactions"
   | "transaction-detail"
   | "void-flow"
+  | "refund-request"
   | "suspended-sales"
   | "suspended-detail"
   | "pending-payments"
@@ -62,7 +65,18 @@ type Screen =
 
 type ProductType = "Digital Course" | "Book" | "E-book" | "Live Class";
 type PaymentMethod = "Cash" | "Credit Card" | "QR Payment";
-type TransactionStatus = "Paid" | "SMS sent" | "Voided" | "Pending Payment" | "Cancelled";
+type TransactionStatus =
+  | "Paid"
+  | "SMS sent"
+  | "Voided"
+  | "Pending Payment"
+  | "Cancelled"
+  | "Refund Requested"
+  | "Refund Approved"
+  | "Refund Processing"
+  | "Refunded";
+type RefundStatus = "Refund Requested" | "Refund Approved" | "Refund Processing" | "Refunded";
+type BadgeTone = "slate" | "sky" | "green" | "amber" | "red" | "violet";
 
 type DeliveryAddress = {
   id: string;
@@ -129,6 +143,21 @@ type DiscountApproval = {
   approvedAt: string;
 };
 
+type RefundInfo = {
+  status: RefundStatus;
+  reason: string;
+  note: string;
+  requestedBy: string;
+  managerApproval: string;
+  requestedAt: string;
+  amount: number;
+  activity: Array<{
+    status: RefundStatus;
+    time: string;
+    staff: string;
+  }>;
+};
+
 type Transaction = {
   id: string;
   time: string;
@@ -144,6 +173,7 @@ type Transaction = {
   discountApproval?: DiscountApproval;
   deliveryAddress?: DeliveryAddress | null;
   promotionNames?: string[];
+  refund?: RefundInfo;
 };
 
 type SuspendedSale = {
@@ -520,6 +550,15 @@ const discountReasons = [
   "Other",
 ];
 
+const refundReasons = [
+  "Customer changed mind",
+  "Wrong course purchased",
+  "Duplicate purchase",
+  "Payment issue",
+  "Course not suitable",
+  "Other",
+];
+
 const suspendReasons = [
   "Waiting for parent confirmation",
   "Customer forgot wallet",
@@ -856,7 +895,7 @@ function duplicatePurchaseForStudent(
 ) {
   if (!student) return null;
   const transaction = transactionsForStudent(transactions, student)
-    .filter((item) => item.status !== "Voided" && item.status !== "Cancelled")
+    .filter((item) => item.status !== "Voided" && item.status !== "Cancelled" && item.status !== "Refunded")
     .find((item) => item.items.some((purchased) => purchased.productId === product.id));
   if (!transaction) return null;
   return {
@@ -884,6 +923,11 @@ function studentTimeline(
               : "Course purchased",
         detail: `${item.name} | ${transaction.id}`,
         status:
+          transaction.status === "Refunded"
+            ? "Refunded"
+            : transaction.status.startsWith("Refund")
+              ? transaction.status
+              :
           transaction.status === "Voided"
             ? "Transaction voided"
             : transaction.status === "Pending Payment"
@@ -894,8 +938,22 @@ function studentTimeline(
                   ? "Upcoming Live Class"
                   : transaction.status === "SMS sent"
                     ? "SMS Sent"
-                    : "Active",
+                  : "Active",
       }));
+      const refundEvents = transaction.refund?.activity.map((event) => ({
+        id: `${transaction.id}-${event.status}`,
+        time: event.time,
+        title:
+          event.status === "Refund Requested"
+            ? "Refund requested"
+            : event.status === "Refund Approved"
+              ? "Refund approved"
+              : event.status === "Refunded"
+                ? "Refunded"
+                : "Refund processing",
+        detail: `${transaction.id} | ${money(transaction.refund?.amount ?? transaction.total)} | ${transaction.refund?.reason ?? "Refund"}`,
+        status: event.status,
+      })) ?? [];
       return [
         {
           id: `${transaction.id}-payment`,
@@ -911,6 +969,7 @@ function studentTimeline(
           detail: `${money(transaction.total)} | ${transaction.method}`,
           status: transaction.status,
         },
+        ...refundEvents,
         ...(transaction.status === "SMS sent"
           ? [
               {
@@ -966,7 +1025,7 @@ function productFromItem(item: TransactionItem) {
 function recentSoldProducts(transactions: Transaction[]) {
   const seen = new Set<string>();
   return transactions
-    .filter((transaction) => transaction.status !== "Voided")
+    .filter((transaction) => transaction.status !== "Voided" && transaction.status !== "Cancelled" && transaction.status !== "Refunded")
     .flatMap((transaction) => transaction.items)
     .map(productFromItem)
     .filter((product): product is Product => Boolean(product))
@@ -1054,11 +1113,138 @@ function maskPhone(phone: string) {
   return digits.length >= 10 ? `${digits.slice(0, 3)}-xxx-${digits.slice(-4)}` : phone;
 }
 
-function transactionStatusTone(status: TransactionStatus): "slate" | "sky" | "green" | "amber" | "red" | "violet" {
+function transactionStatusTone(status: TransactionStatus): BadgeTone {
   if (status === "Voided" || status === "Cancelled") return "red";
+  if (status === "Refunded") return "violet";
+  if (status.startsWith("Refund")) return "amber";
   if (status === "Pending Payment") return "amber";
   if (status === "SMS sent") return "sky";
   return "green";
+}
+
+function isRefundEligible(transaction: Transaction) {
+  return transaction.status === "Paid" || transaction.status === "SMS sent";
+}
+
+function refundStatusTone(status: RefundStatus): BadgeTone {
+  if (status === "Refunded") return "violet";
+  if (status === "Refund Approved") return "green";
+  if (status === "Refund Processing") return "sky";
+  return "amber";
+}
+
+function isCompletedTransaction(transaction: Transaction) {
+  return transaction.status === "Paid" || transaction.status === "SMS sent";
+}
+
+function dashboardMetrics(transactions: Transaction[], suspendedSales: SuspendedSale[]) {
+  const completed = transactions.filter(isCompletedTransaction);
+  const refunded = transactions.filter((transaction) => transaction.status === "Refunded");
+  const refundRequested = transactions.filter((transaction) => transaction.status === "Refund Requested");
+  const revenue = completed.reduce((sum, transaction) => sum + transaction.total, 0);
+  const topProductCounts = new Map<string, { name: string; count: number }>();
+  const productMixCounts = new Map<ProductType, number>([
+    ["Digital Course", 0],
+    ["Book", 0],
+    ["E-book", 0],
+    ["Live Class", 0],
+  ]);
+
+  completed.forEach((transaction) => {
+    transaction.items.forEach((item) => {
+      const current = topProductCounts.get(item.productId) ?? { name: item.name, count: 0 };
+      topProductCounts.set(item.productId, {
+        name: item.name,
+        count: current.count + item.quantity,
+      });
+      productMixCounts.set(item.type, (productMixCounts.get(item.type) ?? 0) + item.quantity);
+    });
+  });
+
+  const events: Array<{ id: string; time: string; title: string; detail: string; tone: BadgeTone }> = [
+    ...transactions.slice(0, 80).flatMap((transaction) => {
+      const transactionEvents: Array<{ id: string; time: string; title: string; detail: string; tone: BadgeTone }> = [];
+      if (isCompletedTransaction(transaction)) {
+        transactionEvents.push({
+          id: `${transaction.id}-completed`,
+          time: transaction.time,
+          title: transaction.status === "SMS sent" ? "SMS sent" : "Payment completed",
+          detail: `${transaction.student} | ${money(transaction.total)}`,
+          tone: transaction.status === "SMS sent" ? "sky" : "green",
+        });
+      }
+      if (transaction.status === "Voided") {
+        transactionEvents.push({
+          id: `${transaction.id}-voided`,
+          time: transaction.time,
+          title: "Transaction voided",
+          detail: `${transaction.id} | ${transaction.student}`,
+          tone: "red",
+        });
+      }
+      transaction.refund?.activity.forEach((event) => {
+        transactionEvents.push({
+          id: `${transaction.id}-${event.status}`,
+          time: event.time.split(", ").pop() ?? event.time,
+          title:
+            event.status === "Refund Requested"
+              ? "Refund requested"
+              : event.status === "Refunded"
+                ? "Refunded"
+                : event.status.toLowerCase(),
+          detail: `${transaction.id} | ${money(transaction.refund?.amount ?? transaction.total)}`,
+          tone: refundStatusTone(event.status),
+        });
+      });
+      return transactionEvents;
+    }),
+    ...suspendedSales.slice(0, 20).map((sale) => ({
+      id: `${sale.id}-suspended`,
+      time: sale.time,
+      title: "Sale suspended",
+      detail: `${sale.student.name} | ${cartItemCount(sale.cart)} items`,
+      tone: "amber" as BadgeTone,
+    })),
+    ...students
+      .filter((student) => student.alerts.includes("SMS failed"))
+      .slice(0, 8)
+      .map((student, index) => ({
+        id: `${student.id}-sms-failed`,
+        time: `11:${String(40 + index).padStart(2, "0")}`,
+        title: "SMS failed",
+        detail: `${student.name} | ${maskPhone(student.phone)}`,
+        tone: "red" as BadgeTone,
+      })),
+  ].sort((a, b) => (a.time < b.time ? 1 : -1)).slice(0, 10);
+
+  return {
+    revenue,
+    completedCount: completed.length,
+    averageOrderValue: completed.length ? Math.round(revenue / completed.length) : 0,
+    statuses: {
+      completed: completed.length,
+      pending: transactions.filter((transaction) => transaction.status === "Pending Payment").length,
+      suspended: suspendedSales.length,
+      voided: transactions.filter((transaction) => transaction.status === "Voided").length,
+      refundRequested: refundRequested.length,
+      refunded: refunded.length,
+    },
+    pendingActions: {
+      pendingPayments: transactions.filter((transaction) => transaction.status === "Pending Payment"),
+      suspendedSales,
+      refundRequests: refundRequested,
+      smsFailed: students.filter((student) => student.alerts.includes("SMS failed")),
+    },
+    topProducts: Array.from(topProductCounts.values()).sort((a, b) => b.count - a.count).slice(0, 5),
+    productMix: Array.from(productMixCounts.entries()).map(([type, count]) => ({ type, count })),
+    recentActivity: events,
+    refundSummary: {
+      requestedCount: refundRequested.length,
+      refundedCount: refunded.length,
+      refundedAmount: refunded.reduce((sum, transaction) => sum + (transaction.refund?.amount ?? transaction.total), 0),
+      latestRequest: refundRequested[0] ?? transactions.find((transaction) => transaction.refund),
+    },
+  };
 }
 
 function Badge({
@@ -1066,7 +1252,7 @@ function Badge({
   tone = "slate",
 }: {
   children: React.ReactNode;
-  tone?: "slate" | "sky" | "green" | "amber" | "red" | "violet";
+  tone?: BadgeTone;
 }) {
   const tones = {
     slate: "bg-slate-100 text-slate-700",
@@ -1472,6 +1658,7 @@ function Header({
   suspendedSales,
   onHome,
   onBranchChange,
+  onDashboard,
   onPendingPayments,
   onDemoTools,
   onSuspendedSales,
@@ -1490,6 +1677,7 @@ function Header({
   suspendedSales: SuspendedSale[];
   onHome: () => void;
   onBranchChange: (branch: string) => void;
+  onDashboard: () => void;
   onPendingPayments: () => void;
   onDemoTools: () => void;
   onSuspendedSales: () => void;
@@ -1560,6 +1748,13 @@ function Header({
             <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-xs">
               {pendingCount}
             </span>
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
+            onClick={onDashboard}
+          >
+            <LayoutDashboard size={16} />
+            Dashboard
           </button>
           <button
             className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
@@ -1802,6 +1997,7 @@ function HomeScreen({
   pendingPayments,
   saleNotice,
   onExisting,
+  onDashboard,
   onNew,
   onPendingPayments,
   onSuspendedSales,
@@ -1814,6 +2010,7 @@ function HomeScreen({
   pendingPayments: Transaction[];
   saleNotice: string;
   onExisting: () => void;
+  onDashboard: () => void;
   onNew: () => void;
   onPendingPayments: () => void;
   onSuspendedSales: () => void;
@@ -1869,6 +2066,20 @@ function HomeScreen({
             </span>
           </button>
         </div>
+        <button
+          className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white p-4 text-left hover:border-[#028FC1]"
+          onClick={onDashboard}
+        >
+          <span>
+            <span className="block font-semibold">Siam Branch Dashboard</span>
+            <span className="mt-1 block text-sm text-slate-500">
+              View today&apos;s sales, queues, product mix, and refund experiment status.
+            </span>
+          </span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-50 text-[#028FC1]">
+            <LayoutDashboard size={20} />
+          </span>
+        </button>
       </section>
 
       <section className="space-y-4">
@@ -2085,14 +2296,18 @@ function StudentProfileScreen({
   const studentTransactions = transactionsForStudent(transactions, student);
   const timeline = studentTimeline(student, transactions, suspendedSales);
   const purchasedItems = studentTransactions
-    .filter((transaction) => transaction.status !== "Voided")
+    .filter((transaction) => transaction.status !== "Voided" && transaction.status !== "Cancelled" && transaction.status !== "Pending Payment")
     .flatMap((transaction) =>
       transaction.items.map((item) => ({
         ...item,
         purchaseDate: `6 Jul 2026, ${transaction.time}`,
         receiptId: transaction.id,
         status:
-          item.type === "Live Class"
+          transaction.status === "Refunded"
+            ? "Refunded"
+            : transaction.status.startsWith("Refund")
+              ? transaction.status
+              : item.type === "Live Class"
             ? "Upcoming Live Class"
             : item.type === "Book"
               ? "Delivered"
@@ -3237,6 +3452,203 @@ function ReceiptPreviewScreen({
   );
 }
 
+function DashboardScreen({
+  transactions,
+  suspendedSales,
+  onBack,
+  onPendingPayments,
+  onSuspendedSales,
+  onTransactions,
+}: {
+  transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
+  onBack: () => void;
+  onPendingPayments: () => void;
+  onSuspendedSales: () => void;
+  onTransactions: () => void;
+}) {
+  const metrics = dashboardMetrics(transactions, suspendedSales);
+  const productMixTotal = metrics.productMix.reduce((sum, item) => sum + item.count, 0) || 1;
+
+  return (
+    <div className="mx-auto max-w-[1480px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back Home</SecondaryButton>}
+        eyebrow="Experimental branch feature"
+        title="Siam Branch Dashboard"
+      />
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <DashboardMetric title="Today's Sales" value={money(metrics.revenue)} detail="Completed transaction revenue" />
+        <DashboardMetric title="Completed Transactions" value={String(metrics.completedCount)} detail="Paid and SMS-sent orders" />
+        <DashboardMetric title="Average Order Value" value={money(metrics.averageOrderValue)} detail="Revenue divided by completed orders" />
+      </section>
+
+      <section className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-5">
+          <section className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold">Transaction Status Summary</h3>
+              <Badge tone="sky">Siam Branch only</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <StatusCount label="Completed" count={metrics.statuses.completed} tone="green" />
+              <StatusCount label="Pending Payment" count={metrics.statuses.pending} tone="amber" />
+              <StatusCount label="Suspended" count={metrics.statuses.suspended} tone="amber" />
+              <StatusCount label="Voided" count={metrics.statuses.voided} tone="red" />
+              <StatusCount label="Refund Requested" count={metrics.statuses.refundRequested} tone="amber" />
+              <StatusCount label="Refunded" count={metrics.statuses.refunded} tone="violet" />
+            </div>
+          </section>
+
+          <section className="grid gap-5 lg:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <h3 className="font-semibold">Top Selling Products</h3>
+              <div className="mt-4 space-y-3">
+                {metrics.topProducts.map((product, index) => (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm" key={product.name}>
+                    <span className="min-w-0">
+                      <span className="mr-2 font-mono text-xs text-slate-500">#{index + 1}</span>
+                      <span className="font-semibold">{product.name}</span>
+                    </span>
+                    <Badge>{product.count} sold</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <h3 className="font-semibold">Product Mix</h3>
+              <div className="mt-4 space-y-4">
+                {metrics.productMix.map((item) => {
+                  const percent = Math.round((item.count / productMixTotal) * 100);
+                  return (
+                    <div key={item.type}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-semibold">{item.type}</span>
+                        <span className="text-slate-500">{item.count} items | {percent}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-[#028FC1]" style={{ width: `${Math.max(percent, 3)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold">Recent Activity</h3>
+            <div className="mt-4 space-y-3">
+              {metrics.recentActivity.map((event) => (
+                <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm md:grid-cols-[80px_1fr_auto]" key={event.id}>
+                  <span className="font-mono text-xs font-semibold text-slate-500">{event.time}</span>
+                  <span>
+                    <span className="block font-semibold">{event.title}</span>
+                    <span className="mt-1 block text-slate-600">{event.detail}</span>
+                  </span>
+                  <Badge tone={event.tone}>{event.title}</Badge>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-5">
+          <section className="rounded-lg border border-slate-200 bg-white p-5">
+            <h3 className="font-semibold">Pending Actions</h3>
+            <div className="mt-4 grid gap-3">
+              <QueueButton count={metrics.pendingActions.pendingPayments.length} label="Pending Payments" onClick={onPendingPayments} tone="sky" />
+              <QueueButton count={metrics.pendingActions.suspendedSales.length} label="Suspended Sales" onClick={onSuspendedSales} tone="amber" />
+              <QueueButton count={metrics.pendingActions.refundRequests.length} label="Refund Requests" onClick={onTransactions} tone="amber" />
+              <QueueButton count={metrics.pendingActions.smsFailed.length} label="SMS Failed Cases" onClick={onTransactions} tone="red" />
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-amber-200 bg-white p-5">
+            <div className="flex items-center gap-2">
+              <RotateCcw size={17} className="text-amber-700" />
+              <h3 className="font-semibold">Refund Summary</h3>
+            </div>
+            <div className="mt-4 grid gap-3 text-sm">
+              <Info label="Refund Requested" value={`${metrics.refundSummary.requestedCount} transactions`} />
+              <Info label="Refunded" value={`${metrics.refundSummary.refundedCount} transactions`} />
+              <Info label="Total Refunded Amount" value={money(metrics.refundSummary.refundedAmount)} />
+              <Info
+                label="Latest Refund Request"
+                value={
+                  metrics.refundSummary.latestRequest
+                    ? `${metrics.refundSummary.latestRequest.id} | ${metrics.refundSummary.latestRequest.student}`
+                    : "No refund activity yet"
+                }
+              />
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+            <h3 className="font-semibold">Read-only prototype dashboard</h3>
+            <p className="mt-2 leading-6">
+              Metrics are calculated from current mock/live state. No backend, database, or BI layer is connected.
+            </p>
+          </section>
+        </aside>
+      </section>
+    </div>
+  );
+}
+
+function DashboardMetric({ title, value, detail }: { title: string; value: string; detail: string }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5">
+      <p className="text-sm font-semibold text-slate-500">{title}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-sm text-slate-500">{detail}</p>
+    </section>
+  );
+}
+
+function StatusCount({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: BadgeTone;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold">{label}</span>
+        <Badge tone={tone}>{count}</Badge>
+      </div>
+    </div>
+  );
+}
+
+function QueueButton({
+  label,
+  count,
+  tone,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  tone: BadgeTone;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm hover:border-[#028FC1]"
+      onClick={onClick}
+    >
+      <span className="font-semibold">{label}</span>
+      <Badge tone={tone}>{count}</Badge>
+    </button>
+  );
+}
+
 function PendingPaymentsScreen({
   transactions,
   onBack,
@@ -3422,13 +3834,26 @@ function TransactionDetailScreen({
   transaction,
   onBack,
   onDuplicate,
+  onProgressRefund,
+  onRefund,
   onVoid,
 }: {
   transaction: Transaction;
   onBack: () => void;
   onDuplicate: () => void;
+  onProgressRefund: (transaction: Transaction) => void;
+  onRefund: () => void;
   onVoid: () => void;
 }) {
+  const nextRefundStatus =
+    transaction.refund?.status === "Refund Requested"
+      ? "Refund Approved"
+      : transaction.refund?.status === "Refund Approved"
+        ? "Refund Processing"
+        : transaction.refund?.status === "Refund Processing"
+          ? "Refunded"
+          : null;
+
   return (
     <div className="mx-auto max-w-[980px] px-6 py-6">
       <ScreenTitle
@@ -3464,9 +3889,53 @@ function TransactionDetailScreen({
             Manager discount: {money(transaction.discountApproval.amount)} | {transaction.discountApproval.reason} | Approved by {transaction.discountApproval.manager}
           </div>
         )}
+        {transaction.refund && (
+          <section className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="text-amber-700" size={18} />
+                  <h3 className="font-semibold text-amber-950">Experimental Refund</h3>
+                  <Badge tone={refundStatusTone(transaction.refund.status)}>{transaction.refund.status}</Badge>
+                </div>
+                <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                  <Info label="Refund Reason" value={transaction.refund.reason} />
+                  <Info label="Refund Note" value={transaction.refund.note || "No note"} />
+                  <Info label="Requested By" value={transaction.refund.requestedBy} />
+                  <Info label="Manager Approval" value={transaction.refund.managerApproval} />
+                  <Info label="Requested Date/Time" value={transaction.refund.requestedAt} />
+                  <Info label="Refund Amount" value={money(transaction.refund.amount)} />
+                </div>
+              </div>
+              {nextRefundStatus && (
+                <SecondaryButton icon={<RotateCcw size={16} />} onClick={() => onProgressRefund(transaction)}>
+                  Mark {nextRefundStatus}
+                </SecondaryButton>
+              )}
+            </div>
+            <div className="mt-4 rounded-md border border-amber-200 bg-white p-3">
+              <h4 className="text-sm font-semibold text-amber-950">Refund Activity</h4>
+              <div className="mt-2 space-y-2">
+                {transaction.refund.activity.map((event) => (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm" key={`${transaction.id}-${event.status}`}>
+                    <span>{event.status}</span>
+                    <span className="text-slate-500">{event.time} | {event.staff}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
         <div className="mt-5 flex flex-wrap gap-3">
           <SecondaryButton icon={<Printer size={17} />}>Reprint Receipt</SecondaryButton>
           <SecondaryButton icon={<Copy size={17} />} onClick={onDuplicate}>Duplicate Sale</SecondaryButton>
+          <SecondaryButton
+            disabled={!isRefundEligible(transaction)}
+            icon={<RotateCcw size={17} />}
+            onClick={onRefund}
+          >
+            Request Refund
+          </SecondaryButton>
           <PrimaryButton
             className="bg-red-600 hover:bg-red-700"
             disabled={transaction.status !== "Paid" && transaction.status !== "SMS sent"}
@@ -3552,6 +4021,124 @@ function VoidFlowScreen({
             onClick={onComplete}
           >
             Confirm Void
+          </PrimaryButton>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RefundRequestScreen({
+  transaction,
+  onCancel,
+  onSubmit,
+}: {
+  transaction: Transaction;
+  onCancel: () => void;
+  onSubmit: (reason: string, note: string, managerPin: string) => void;
+}) {
+  const [reason, setReason] = useState(refundReasons[0]);
+  const [note, setNote] = useState("");
+  const [managerPin, setManagerPin] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const canSubmit = isRefundEligible(transaction) && reason && managerPin.trim().length >= 4 && confirm;
+
+  return (
+    <div className="mx-auto max-w-[900px] px-6 py-6">
+      <ScreenTitle
+        action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onCancel}>Cancel</SecondaryButton>}
+        eyebrow="Experimental branch feature"
+        title="Request Full Refund"
+      />
+      {!isRefundEligible(transaction) && (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
+          Refund is only available for completed transactions. This transaction is {transaction.status}.
+        </div>
+      )}
+      <section className="rounded-lg border border-amber-200 bg-white p-5">
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <div className="flex gap-3">
+            <AlertTriangle className="shrink-0 text-amber-700" size={20} />
+            <p>
+              This will request a full refund for the entire order. Refund is separate from same-day Void.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <Info label="Receipt Number" value={transaction.id} />
+          <Info label="Student" value={transaction.student} />
+          <Info label="Payment Method" value={transaction.method} />
+          <Info label="Paid Amount" value={money(transaction.total)} />
+          <Info label="Refund Amount" value={money(transaction.total)} />
+          <Info label="Requested By" value={staffName} />
+        </div>
+
+        <div className="mt-5 rounded-lg border border-slate-200">
+          {transaction.items.map((item) => (
+            <div className="flex justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-refund-${item.productId}`}>
+              <span>
+                <span className="block font-semibold">{item.name}</span>
+                <span className="text-xs text-slate-500">{item.type} | Qty {item.quantity}</span>
+              </span>
+              <span className="font-semibold">{money(item.price * item.quantity - item.discount * item.quantity)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Refund Reason <span className="text-red-600">*</span></span>
+            <select
+              className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            >
+              {refundReasons.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <Field
+            label="Manager PIN"
+            placeholder="Enter manager PIN"
+            required
+            value={managerPin}
+            onChange={setManagerPin}
+          />
+        </div>
+
+        <label className="mt-5 block">
+          <span className="text-sm font-semibold text-slate-700">Refund Note</span>
+          <textarea
+            className="mt-1 min-h-24 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+            placeholder="Optional note for manager/audit review"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+
+        <label className="mt-5 flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <input
+            className="mt-1 h-4 w-4 accent-[#028FC1]"
+            checked={confirm}
+            type="checkbox"
+            onChange={(event) => setConfirm(event.target.checked)}
+          />
+          <span>
+            I confirm this is a full-order refund request for the entire paid transaction.
+          </span>
+        </label>
+
+        <div className="mt-5 flex justify-end gap-3">
+          <SecondaryButton onClick={onCancel}>Keep Transaction</SecondaryButton>
+          <PrimaryButton
+            className="bg-amber-600 hover:bg-amber-700"
+            disabled={!canSubmit}
+            icon={<ShieldCheck size={17} />}
+            onClick={() => onSubmit(reason, note, managerPin)}
+          >
+            Submit Refund Request
           </PrimaryButton>
         </div>
       </section>
@@ -3876,7 +4463,7 @@ function PurchaseSection({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{item.name}</span>
-                <Badge tone={item.status === "Expired" ? "red" : item.status === "Upcoming Live Class" ? "amber" : "green"}>
+                <Badge tone={item.status === "Expired" ? "red" : item.status === "Refunded" ? "violet" : item.status.startsWith("Refund") || item.status === "Upcoming Live Class" ? "amber" : "green"}>
                   {item.status}
                 </Badge>
               </div>
@@ -4268,6 +4855,70 @@ export default function App() {
     setScreen("transaction-detail");
   }
 
+  function submitRefundRequest(transaction: Transaction, reason: string, note: string, managerPin: string) {
+    if (!isRefundEligible(transaction)) return;
+    const requestedAt = "6 Jul 2026, 14:42";
+    const refunded: Transaction = {
+      ...transaction,
+      status: "Refund Requested",
+      refund: {
+        status: "Refund Requested",
+        reason,
+        note: note.trim(),
+        requestedBy: staffName,
+        managerApproval: `PIN ${managerPin.slice(-2).padStart(managerPin.length, "*")}`,
+        requestedAt,
+        amount: transaction.total,
+        activity: [
+          {
+            status: "Refund Requested",
+            time: requestedAt,
+            staff: staffName,
+          },
+        ],
+      },
+    };
+    setSelectedTransaction(refunded);
+    setTransactionHistory((current) =>
+      current.map((item) => (item.id === transaction.id ? refunded : item)),
+    );
+    setSaleNotice(`Refund requested for ${transaction.id}.`);
+    setScreen("transaction-detail");
+  }
+
+  function progressRefund(transaction: Transaction) {
+    if (!transaction.refund) return;
+    const nextStatus =
+      transaction.refund.status === "Refund Requested"
+        ? "Refund Approved"
+        : transaction.refund.status === "Refund Approved"
+          ? "Refund Processing"
+          : transaction.refund.status === "Refund Processing"
+            ? "Refunded"
+            : null;
+    if (!nextStatus) return;
+    const updated: Transaction = {
+      ...transaction,
+      status: nextStatus,
+      refund: {
+        ...transaction.refund,
+        status: nextStatus,
+        activity: [
+          ...transaction.refund.activity,
+          {
+            status: nextStatus,
+            time: nextStatus === "Refunded" ? "6 Jul 2026, 15:10" : nextStatus === "Refund Processing" ? "6 Jul 2026, 14:58" : "6 Jul 2026, 14:49",
+            staff: staffName,
+          },
+        ],
+      },
+    };
+    setSelectedTransaction(updated);
+    setTransactionHistory((current) =>
+      current.map((item) => (item.id === transaction.id ? updated : item)),
+    );
+  }
+
   function applyDemoScenario(scenario: DemoScenario) {
     const dataset = buildDemoDataset(scenario);
     setDemoScenario(scenario);
@@ -4319,10 +4970,22 @@ export default function App() {
             saleNotice={saleNotice}
             suspendedSales={suspendedSales}
             transactions={transactionHistory}
+            onDashboard={() => setScreen("dashboard")}
             onExisting={() => setScreen("student-search")}
             onNew={() => setScreen("new-student")}
             onPendingPayments={() => setScreen("pending-payments")}
             onResumeSale={resumeSale}
+            onSuspendedSales={() => setScreen("suspended-sales")}
+            onTransactions={() => setScreen("transactions")}
+          />
+        );
+      case "dashboard":
+        return (
+          <DashboardScreen
+            suspendedSales={suspendedSales}
+            transactions={transactionHistory}
+            onBack={() => setScreen("home")}
+            onPendingPayments={() => setScreen("pending-payments")}
             onSuspendedSales={() => setScreen("suspended-sales")}
             onTransactions={() => setScreen("transactions")}
           />
@@ -4498,7 +5161,17 @@ export default function App() {
             transaction={selectedTransaction}
             onBack={() => setScreen("transactions")}
             onDuplicate={() => duplicateSale(selectedTransaction)}
+            onProgressRefund={progressRefund}
+            onRefund={() => setScreen("refund-request")}
             onVoid={() => setScreen("void-flow")}
+          />
+        );
+      case "refund-request":
+        return (
+          <RefundRequestScreen
+            transaction={selectedTransaction}
+            onCancel={() => setScreen("transaction-detail")}
+            onSubmit={(reason, note, managerPin) => submitRefundRequest(selectedTransaction, reason, note, managerPin)}
           />
         );
       case "void-flow":
@@ -4540,6 +5213,7 @@ export default function App() {
         suspendedSales={suspendedSales}
         transactions={transactionHistory}
         onBranchChange={setSelectedBranch}
+        onDashboard={() => setScreen("dashboard")}
         onDemoTools={() => setScreen("demo-tools")}
         onHome={startNewSale}
         onPendingPayments={() => setScreen("pending-payments")}

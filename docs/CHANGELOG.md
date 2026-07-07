@@ -112,3 +112,30 @@
 - Added Demo Tools actions for reset, fresh generation, scenario switching, transaction seeding, student seeding, pending payment seeding, and suspended sale seeding.
 - Restricted branch selector to Siam Branch only for this stakeholder demo scope.
 - Verified `npm run lint` and `npm run build` after implementation.
+
+## Milestone 9 - Experimental Full-Order Refund Flow
+
+- Added experimental refund branch feature for full-order refunds only.
+- Added Request Refund action on completed transaction detail records.
+- Added controlled refund request screen with receipt details, purchased items, payment method, paid amount, full refund amount, refund reason, optional note, manager PIN, and confirmation checkbox.
+- Added refund statuses: `Refund Requested`, `Refund Approved`, `Refund Processing`, and `Refunded`.
+- Added mock refund status progression from Transaction Detail.
+- Added refund detail section with status, reason, note, requested staff, manager approval, requested date/time, refund amount, and activity log.
+- Added refund status badges in Recent Transactions.
+- Added refund events to Student Profile timeline.
+- Updated purchased item display so refunded orders remain visible with `Refunded` status.
+- Kept refund separate from Void and excluded Pending Payment, Voided, Cancelled, and already-refund-state transactions from refund requests.
+- Verified `npm run lint` and `npm run build`.
+
+## Milestone 10 - Experimental Siam Branch Dashboard
+
+- Added read-only experimental Dashboard page for Siam Branch stakeholder demo.
+- Added Dashboard shortcut in the header and Home screen.
+- Added Today's Sales widgets for revenue, completed transaction count, and average order value.
+- Added Transaction Status Summary for completed, pending payment, suspended, voided, refund requested, and refunded records.
+- Added Pending Actions widgets for pending payments, suspended sales, refund requests, and SMS failed cases.
+- Added Top Selling Products and Product Mix sections based on current completed transaction state.
+- Added Recent Activity stream for payment completed, refund requested, refunded, sale suspended, transaction voided, and SMS sent/failed events.
+- Added Refund Summary for requested count, refunded count, total refunded amount, and latest refund request.
+- Kept dashboard read-only with no backend, database, or BI integration.
+- Verified `npm run lint` and `npm run build`.

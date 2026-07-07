@@ -10,7 +10,11 @@
 - Payment failure and retry states are not implemented.
 - Receipt PDF download and email receipt are mock actions with visible confirmation feedback.
 - SMS resend is represented as an action but does not simulate limits or failure.
-- Refund flow is not distinct from same-day void.
+- Full-order refund is implemented as an experimental branch feature only and is not approved for main/production.
+- Refund is mock state only and has no backend, payment gateway, settlement, accounting, or audit-system integration.
+- Refund does not support partial refund, item-level refund, exchange, store credit, or refund to a different payment method.
+- Dashboard is implemented as an experimental read-only branch feature only and is not approved for main/production.
+- Dashboard metrics are calculated from in-memory mock/live prototype state and should not be treated as accounting, BI, or operational reporting truth.
 - Staff authentication and role permissions are not implemented.
 - Manager approval is mocked with simple code or PIN entry fields.
 - Smart recommendations use simple mock logic rather than real sales analytics.
@@ -24,6 +28,7 @@
 
 - Most responsive visual inspection has focused on the Home screen.
 - Catalog, delivery, pending payments, suspended sales, and transaction tables should receive more tablet-specific QA.
+- Experimental dashboard should receive tablet and small-laptop visual QA before stakeholder presentation.
 - Icon-only actions have labels and tooltips but should receive accessibility testing.
 - Global search supports `Cmd K` / `Ctrl K`; additional keyboard shortcuts are not implemented.
 

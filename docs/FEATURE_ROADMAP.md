@@ -6,6 +6,8 @@ This file tracks planned prototype improvements. Current completed functionality
 
 - Review prototype with branch-staff transaction scenarios.
 - Tighten catalog/cart/payment workflow friction.
+- Validate experimental full-order refund branch flow before any main/production merge decision.
+- Validate experimental Siam Branch dashboard metrics with branch managers before any main/production merge decision.
 - Add presenter notes for stakeholder walkthroughs.
 - Add payment failure and retry flow.
 - Validate suspended-sales queue, resume, cancel, and duplicate-sale flows with branch managers.
@@ -25,7 +27,7 @@ This file tracks planned prototype improvements. Current completed functionality
 ## Priority 3
 
 - Add manager role and permission model.
-- Add refund flow distinct from same-day void.
+- Decide whether the experimental full-order refund flow should graduate to main scope after stakeholder review.
 - Add live class seat hold behavior without inventory management.
 
 ## Technical Roadmap
@@ -34,5 +36,6 @@ This file tracks planned prototype improvements. Current completed functionality
 - Extract Demo Data Engine into a dedicated module when component splitting begins.
 - Add project-local Playwright dependency and scripted browser tests.
 - Add broader responsive visual QA.
+- Add automated checks for experimental dashboard metrics once the dashboard scope is approved.
 - Add automated checks for suspended queue, pending payment queue, student profile timeline, delivery selection, and resume state restoration.
 - Review dependency audit warnings before production handoff.
