@@ -163,3 +163,26 @@
 - Added Transaction Detail access to Receipt Preview.
 - Expanded receipt content with branch, receipt number, date/time, staff, student, phone, items, product type, BU/product group, quantity, unit price, discount, totals, payment method/status, delivery information, SMS activation note, and refund status.
 - Verified `npm run lint` and `npm run build`.
+
+## Milestone 13 - Internal POS Strategy Presentation
+
+- Added POS Strategy Presentation inside the existing POS app.
+- Added Demo Tools cards for POS Strategy Presentation and Internal Resources.
+- Added an internal slide-like HTML presentation explaining Education POS First as a lower-risk incremental delivery strategy toward Void, Refund Request, Change, and Advanced RCMS.
+- Added presentation slides for current challenge, lessons learned, proposed direction, why POS first, POS workflow, phased delivery, Void versus Refund, prototype demo, discussion, and closing.
+- Added Open POS Demo, Back to Demo Tools, and Back to POS Home navigation from the presentation.
+- Added initial Internal Resources page for POS Strategy Presentation, RCMS Demo Videos, Refund & Change Notes, Future Integration Notes, and Prototype Links.
+- Added Thai-friendly speaker notes in `docs/POS_STRATEGY_PRESENTATION_NOTES.md`.
+- Updated project documentation to reflect the internal presentation section and POS-first strategy decision.
+
+## Milestone 14 - Internal Product Hub And Presentation Mode
+
+- Reworked Internal Resources from a placeholder into an internal Product Hub.
+- Added grouped resource sections for Project Documents, Design, Demo, Testing, Technical, and Business Process.
+- Added external links for PRD, first requirement sheet, Miro board, Figma, UI/database mapping, RCMS demo video, operation training videos, testing sheets, accounting test cases, database review, Lark POC, report requirements, current operation flow, and refund/change policy.
+- Added new-tab Open buttons for external resources.
+- Added Presentation Mode to POS Strategy Presentation.
+- Presentation Mode shows one slide at a time, hides normal navigation behind a focused overlay, supports Next/Previous, Left/Right keyboard arrows, Escape to exit, progress indicator, and slide number.
+- Improved presentation wording around Refund & Change coordination, Accounting, legacy systems, business rules, incremental delivery, frequent releases, lower implementation risk, and unchanged long-term RCMS vision.
+- Simplified the discussion slide to `Decision to Align`.
+- Updated project documentation and speaker notes.

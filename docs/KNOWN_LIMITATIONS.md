@@ -17,6 +17,8 @@
 - Approved refund requests are only marked as sent to Accounting; actual Accounting refund completion is outside this POS prototype.
 - Dashboard is implemented as an experimental read-only branch feature only and is not approved for main/production.
 - Dashboard metrics are calculated from in-memory mock/live prototype state and should not be treated as accounting, BI, or operational reporting truth.
+- POS Strategy Presentation is an in-app browser-based deck, not a PowerPoint or separate exported artifact.
+- Internal Resources opens external Google, Drive, Miro, and Figma links in new tabs; access still depends on each stakeholder's account permissions.
 - Staff authentication and role permissions are not implemented.
 - Manager approval is mocked with simple code or PIN entry fields.
 - Smart recommendations use simple mock logic rather than real sales analytics.

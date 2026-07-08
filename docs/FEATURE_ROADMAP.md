@@ -12,7 +12,6 @@ This file tracks planned prototype improvements. Current completed functionality
 - Define Accounting handoff requirements for approved refund requests outside the POS prototype.
 - Validate experimental Siam Branch dashboard metrics with branch managers before any main/production merge decision.
 - Validate printable receipt format with branch operations before production handoff.
-- Add presenter notes for stakeholder walkthroughs.
 - Add payment failure and retry flow.
 - Validate suspended-sales queue, resume, cancel, and duplicate-sale flows with branch managers.
 - Validate pending QR payment flow with branch staff.
@@ -27,17 +26,20 @@ This file tracks planned prototype improvements. Current completed functionality
 - Add split payment or mixed payment methods.
 - Add realistic promotion and discount rules beyond manager-approved manual discounts.
 - Add SMS resend status and resend limits.
+- Add presentation export support only if stakeholders need an offline deck.
 
 ## Priority 3
 
 - Add manager role and permission model.
 - Decide whether the experimental full-order refund flow should graduate to main scope after stakeholder review.
 - Add live class seat hold behavior without inventory management.
+- Define advanced RCMS scope after POS, Void, Refund Request, Change, and integration priorities are validated.
 
 ## Technical Roadmap
 
 - Split `app/page.tsx` into feature components.
 - Extract Demo Data Engine into a dedicated module when component splitting begins.
+- Extract internal presentation slide content into a dedicated content file if the deck grows.
 - Add project-local Playwright dependency and scripted browser tests.
 - Add broader responsive visual QA for mobile/tablet dashboard, catalog/cart, queues, transaction detail, and refund request screens.
 - Add automated checks for experimental dashboard metrics once the dashboard scope is approved.

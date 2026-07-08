@@ -9,9 +9,12 @@ import {
   ChevronRight,
   Copy,
   CreditCard,
+  Database,
   LayoutDashboard,
   Download,
+  ExternalLink,
   FileText,
+  FolderOpen,
   History,
   Home,
   Loader2,
@@ -31,12 +34,14 @@ import {
   Signal,
   ShoppingCart,
   Smartphone,
+  TableProperties,
   Star,
   Tag,
   Trash2,
   Truck,
   User,
   UserPlus,
+  Video,
   Wifi,
   X,
 } from "lucide-react";
@@ -59,6 +64,8 @@ type Screen =
   | "suspended-detail"
   | "pending-payments"
   | "demo-tools"
+  | "pos-strategy-presentation"
+  | "internal-resources"
   | "order-summary"
   | "delivery-info"
   | "receipt-preview";
@@ -4790,11 +4797,475 @@ function PurchaseSection({
   );
 }
 
+const strategySlides = [
+  {
+    eyebrow: "Strategy",
+    title: "Education POS First",
+    subtitle: "Building toward Refund & Change Management step by step",
+    body: (
+      <div className="mt-8 rounded-lg border border-sky-200 bg-sky-50 p-5 text-lg font-semibold text-sky-950">
+        POS-first is a lower-risk incremental delivery strategy.
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Current Challenge",
+    title: "RCMS has many cases and many dependencies.",
+    body: (
+      <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {["ERP", "OMS", "Accounting", "Delivery", "Approval", "Legacy Systems", "Business Rules"].map((item) => (
+          <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-center text-lg font-semibold text-slate-800" key={item}>
+            {item}
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    eyebrow: "What We Learned",
+    title: "RCMS is still important.",
+    subtitle: "The long-term vision remains unchanged. The delivery path should be incremental.",
+    body: (
+      <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-slate-200 bg-white p-5">
+          <h3 className="text-xl font-semibold">Keep the target</h3>
+          <p className="mt-3 text-slate-600">Refund and Change Management remains part of the future operating model.</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-5">
+          <h3 className="text-xl font-semibold">Deliver value sooner</h3>
+          <p className="mt-3 text-slate-600">Start with Education POS, then release useful controls in smaller increments.</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-5">
+          <h3 className="text-xl font-semibold">Reduce risk</h3>
+          <p className="mt-3 text-slate-600">Frequent releases create feedback while lowering implementation risk.</p>
+        </div>
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Proposed Direction",
+    title: "Build Education POS first.",
+    subtitle: "Then gradually expand POS with more refund and change controls.",
+    body: (
+      <PresentationFlow
+        items={["Education POS", "Void", "Full Refund", "More Refund Cases", "Change Cases", "Advanced RCMS"]}
+      />
+    ),
+  },
+  {
+    eyebrow: "Why POS First",
+    title: "Value arrives earlier.",
+    body: (
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        <PresentationCard
+          title="Business Value"
+          bullets={["Useful for branch staff earlier", "Less system switching", "Better customer context"]}
+        />
+        <PresentationCard
+          title="Technical Value"
+          bullets={["POS owns transaction context", "Natural integration point for OMS, ERP, Payment, Delivery, Lark"]}
+        />
+        <PresentationCard
+          title="Delivery Value"
+          bullets={["Smaller releases", "Faster feedback", "Lower risk"]}
+        />
+      </div>
+    ),
+  },
+  {
+    eyebrow: "POS Workflow",
+    title: "One cashier flow, with controls after payment.",
+    body: (
+      <PresentationFlow
+        items={["Student / Walk-in", "Product", "Cart", "Delivery if Book", "Payment", "Receipt", "Void / Refund if needed"]}
+      />
+    ),
+  },
+  {
+    eyebrow: "Phased Delivery",
+    title: "Deliver in practical chunks.",
+    body: (
+      <div className="mt-8 grid gap-3">
+        {[
+          ["Phase 1", "Core Education POS"],
+          ["Phase 2", "Void + Full Refund Request"],
+          ["Phase 3", "Integrations"],
+          ["Phase 4", "Advanced RCMS"],
+        ].map(([phase, detail]) => (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4" key={phase}>
+            <span className="text-sm font-semibold uppercase text-[#028FC1]">{phase}</span>
+            <span className="text-xl font-semibold text-slate-900">{detail}</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Control Language",
+    title: "Void vs Refund",
+    body: (
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <PresentationCard title="Void" bullets={["Same-day correction", "Mistake correction before settlement"]} />
+        <PresentationCard title="Refund" bullets={["Post-payment customer request", "Approval first, then Accounting handles payout"]} />
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Prototype Demo",
+    title: "Show the operating flow.",
+    body: (
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {["Home", "Student Search", "Catalog", "Cart", "Payment", "Receipt", "Transactions", "Void", "Refund Request", "Dashboard"].map((item) => (
+          <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-lg font-semibold" key={item}>
+            {item}
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Discussion",
+    title: "Decision to Align",
+    subtitle: "Confirm POS-first as the incremental path toward RCMS.",
+    body: (
+      <div className="mt-10 max-w-3xl rounded-lg border border-sky-200 bg-sky-50 p-6 text-xl leading-8 text-sky-950">
+        Align on the delivery approach first. Scope details can follow after direction is clear.
+      </div>
+    ),
+  },
+  {
+    eyebrow: "Closing",
+    title: "Deliver Smaller. Learn Faster. Build Toward RCMS.",
+    body: (
+      <div className="mt-8 rounded-lg border border-sky-200 bg-white p-6 text-2xl font-semibold text-[#028FC1]">
+        Education POS is the first useful step, not the final destination.
+      </div>
+    ),
+  },
+];
+
+function PresentationCard({ title, bullets }: { title: string; bullets: string[] }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
+      <ul className="mt-4 space-y-3 text-base leading-7 text-slate-600">
+        {bullets.map((item) => (
+          <li className="flex gap-3" key={item}>
+            <CheckCircle2 className="mt-1 shrink-0 text-[#028FC1]" size={18} />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PresentationFlow({ items }: { items: string[] }) {
+  return (
+    <div className="mt-10 flex flex-wrap items-center gap-3">
+      {items.map((item, index) => (
+        <div className="flex items-center gap-3" key={item}>
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-sm">
+            {item}
+          </div>
+          {index < items.length - 1 && <ChevronRight className="text-[#028FC1]" size={24} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PresentationSlide({
+  slide,
+  index,
+  compact = false,
+}: {
+  slide: typeof strategySlides[number];
+  index: number;
+  compact?: boolean;
+}) {
+  return (
+    <section className={`${compact ? "min-h-[calc(100vh-148px)]" : "min-h-[640px]"} rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 md:p-12`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm font-semibold uppercase text-[#028FC1]">{slide.eyebrow}</span>
+        <span className="font-mono text-sm font-semibold text-slate-400">{String(index + 1).padStart(2, "0")} / {strategySlides.length}</span>
+      </div>
+      <h2 className={`${compact ? "mt-10 text-4xl md:text-6xl" : "mt-10 text-4xl md:text-6xl"} max-w-5xl font-semibold tracking-tight text-slate-950`}>
+        {slide.title}
+      </h2>
+      {slide.subtitle && <p className="mt-6 max-w-4xl text-2xl leading-9 text-slate-600">{slide.subtitle}</p>}
+      {slide.body}
+    </section>
+  );
+}
+
+function PosStrategyPresentationScreen({
+  onBack,
+  onHome,
+  onOpenDemo,
+}: {
+  onBack: () => void;
+  onHome: () => void;
+  onOpenDemo: () => void;
+}) {
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const progress = ((activeSlide + 1) / strategySlides.length) * 100;
+  const goNext = () => setActiveSlide((current) => Math.min(strategySlides.length - 1, current + 1));
+  const goPrevious = () => setActiveSlide((current) => Math.max(0, current - 1));
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") goNext();
+      if (event.key === "ArrowLeft") goPrevious();
+      if (event.key === "Escape") setPresentationMode(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [presentationMode]);
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
+      <ScreenTitle
+        action={
+          <div className="flex flex-wrap gap-2">
+            <PrimaryButton icon={<ChevronRight size={16} />} onClick={() => setPresentationMode(true)}>Presentation Mode</PrimaryButton>
+            <SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Demo Tools</SecondaryButton>
+            <SecondaryButton icon={<Home size={16} />} onClick={onHome}>Back to POS Home</SecondaryButton>
+          </div>
+        }
+        eyebrow="Internal presentation"
+        title="POS Strategy Presentation"
+      />
+      <div className="space-y-6">
+        {strategySlides.map((slide, index) => (
+          <div className="relative" key={slide.title}>
+            <PresentationSlide index={index} slide={slide} />
+            {index === 8 && (
+              <PrimaryButton className="absolute bottom-10 left-12" icon={<ShoppingCart size={18} />} onClick={onOpenDemo}>Open POS Demo</PrimaryButton>
+            )}
+          </div>
+        ))}
+      </div>
+      {presentationMode && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-slate-100 p-4 md:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase text-[#028FC1]">Presentation Mode</p>
+              <p className="text-xs text-slate-500">Use Left / Right arrows. Press Esc to exit.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold text-slate-500">
+                {activeSlide + 1} / {strategySlides.length}
+              </span>
+              <SecondaryButton className="min-h-9 px-3" icon={<X size={15} />} onClick={() => setPresentationMode(false)}>Exit</SecondaryButton>
+            </div>
+          </div>
+          <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full bg-[#028FC1] transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="min-h-0 flex-1 transition-opacity duration-300">
+            <PresentationSlide compact index={activeSlide} slide={strategySlides[activeSlide]} />
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <SecondaryButton disabled={activeSlide === 0} icon={<ArrowLeft size={17} />} onClick={goPrevious}>Previous</SecondaryButton>
+            {activeSlide === 8 && <PrimaryButton icon={<ShoppingCart size={18} />} onClick={onOpenDemo}>Open POS Demo</PrimaryButton>}
+            <PrimaryButton disabled={activeSlide === strategySlides.length - 1} icon={<ChevronRight size={17} />} onClick={goNext}>Next</PrimaryButton>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InternalResourcesScreen({
+  onBack,
+  onPresentation,
+  onHome,
+}: {
+  onBack: () => void;
+  onPresentation: () => void;
+  onHome: () => void;
+}) {
+  const resourceSections = [
+    {
+      title: "Project Documents",
+      icon: <FileText size={20} />,
+      items: [
+        {
+          title: "Product Requirement Document (PRD)",
+          description: "Original PRD for RCMS.",
+          url: "https://docs.google.com/document/d/1pyEWfvOVq4zRNZDsNAZRw7UzvkIIN5jzTtXqMf14uvg/edit?tab=t.0#heading=h.y5yaanpwz4e9",
+        },
+        {
+          title: "First Requirement Sheet",
+          description: "Initial requirement gathering.",
+          url: "https://docs.google.com/spreadsheets/d/1sG2Hcjpp4dbGzczfIaKvA3kqKMmd9PLHN_jSGko73kI/edit?gid=2145260807#gid=2145260807",
+        },
+        {
+          title: "Miro Brainstorm Board",
+          description: "Flow discussion and brainstorming.",
+          url: "https://miro.com/app/board/uXjVJ81y1EA=/",
+        },
+      ],
+    },
+    {
+      title: "Design",
+      icon: <Tag size={20} />,
+      items: [
+        {
+          title: "UI Figma",
+          description: "UI reference and design.",
+          url: "https://www.figma.com/design/8h18bUKRCDnmFCbfWBlLn5/LearnService?node-id=7406-565403&p=f&t=SFQ8xxwQMbkEjeTL-0",
+        },
+        {
+          title: "UI -> Database Mapping",
+          description: "UI to database relationship overview.",
+          url: "https://docs.google.com/presentation/d/1YWCPV5CIxhXEb1WJDmmtPDXkwPp0rST39baoT1ScFcs/edit?slide=id.g3c31c9da2d2_0_83#slide=id.g3c31c9da2d2_0_83",
+        },
+      ],
+    },
+    {
+      title: "Demo",
+      icon: <Video size={20} />,
+      items: [
+        {
+          title: "RCMS Demo Video",
+          description: "High-level demo.",
+          url: "https://drive.google.com/file/d/1Qz5MI89yS7gn0CCKM8pjuYA4s7ms32UO/view?usp=drive_link",
+        },
+        {
+          title: "Operation Training Videos",
+          description: "Current operation workflow videos.",
+          url: "https://drive.google.com/drive/u/0/folders/1Lmz80yCsa17LRB4wY_TkV2jheZ1JlmJF",
+        },
+      ],
+    },
+    {
+      title: "Testing",
+      icon: <TableProperties size={20} />,
+      items: [
+        {
+          title: "Testing Accounts & SKU",
+          description: "Accounts and SKU for testing.",
+          url: "https://docs.google.com/spreadsheets/d/1XHOWNnd_KrnRlWfjRPQj5CddOgf-Gn8pv4V1ctdeO7E/edit?gid=0#gid=0",
+        },
+        {
+          title: "RCMS Test Cases",
+          description: "Business UAT scenarios.",
+          url: "https://docs.google.com/spreadsheets/d/1cDXiDqMgmlCBRTb263hj-hfah8iGhXuh7Yn8RDWZu7w/edit?gid=0#gid=0",
+        },
+        {
+          title: "Accounting Test Cases",
+          description: "Accounting validation.",
+          url: "https://docs.google.com/spreadsheets/d/1v6EGy8VtuIqvvGNjP2Fw6Iyl0duPp2NmHGa0UDNHgWo/edit?gid=1713189472#gid=1713189472",
+        },
+      ],
+    },
+    {
+      title: "Technical",
+      icon: <Database size={20} />,
+      items: [
+        {
+          title: "Database Review",
+          description: "Database review materials.",
+          url: "https://drive.google.com/drive/folders/18GKwq5Pb4DX172SbMgbzIxqz_mp63qSg?usp=drive_link",
+        },
+        {
+          title: "Lark Integration POC",
+          description: "Prototype integration with Lark.",
+          url: "https://docs.google.com/spreadsheets/d/1-C-Ahk0Q8TyFc_YF4ytWMVETIa5ymE8OsEh5pMPNWEw/edit?usp=sharing",
+        },
+        {
+          title: "Report Requirements",
+          description: "Reports required from Data Team.",
+          url: "https://docs.google.com/spreadsheets/d/1A-UidRcRT9vrG8xX4v5v8U0Ff3RCdfOmd9LfyCkQq7M/edit?gid=127578612#gid=127578612",
+        },
+      ],
+    },
+    {
+      title: "Business Process",
+      icon: <FolderOpen size={20} />,
+      items: [
+        {
+          title: "Current Operation Flow",
+          description: "Current manual refund/change process used by Operations.",
+          url: "https://docs.google.com/spreadsheets/d/1hml7jV9YFf-QhGbDVlxgRQRSxt4jX-L55-CdQIQkt1E/edit?gid=0#gid=0",
+        },
+        {
+          title: "Refund & Change Policy",
+          description: "Current business policy.",
+          url: "https://docs.google.com/presentation/d/1r1hmt4yFq04IgpAOFCJDDst6hrw0kplLLm-x3JIK0zY/edit?slide=id.g2c622b2993e_0_295#slide=id.g2c622b2993e_0_295",
+        },
+      ],
+    },
+  ];
+
+  return (
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
+      <ScreenTitle
+        action={
+          <div className="flex flex-wrap gap-2">
+            <SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Demo Tools</SecondaryButton>
+            <SecondaryButton icon={<Home size={16} />} onClick={onHome}>Back to POS Home</SecondaryButton>
+          </div>
+        }
+        eyebrow="Internal resources"
+        title="Internal Product Hub"
+      />
+      <div className="mb-5 rounded-lg border border-sky-200 bg-sky-50 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold uppercase text-[#028FC1]">Internal Use Only</p>
+            <h3 className="mt-1 text-xl font-semibold">Project resources for Product, Development, QA, Operations, and stakeholders</h3>
+            <p className="mt-2 text-sm leading-6 text-sky-950">
+              Central hub for the documents, videos, test cases, integration notes, and process references used around the POS and RCMS discussion.
+            </p>
+          </div>
+          <PrimaryButton icon={<FileText size={17} />} onClick={onPresentation}>Open POS Strategy Presentation</PrimaryButton>
+        </div>
+      </div>
+      <div className="space-y-6">
+        {resourceSections.map((section) => (
+          <section className="rounded-lg border border-slate-200 bg-white p-5" key={section.title}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-50 text-[#028FC1]">
+                {section.icon}
+              </div>
+              <h3 className="text-lg font-semibold">{section.title}</h3>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {section.items.map((item) => (
+                <article className="flex min-h-[168px] flex-col rounded-lg border border-slate-200 bg-slate-50 p-4" key={item.title}>
+                  <h4 className="font-semibold text-slate-950">{item.title}</h4>
+                  <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{item.description}</p>
+                  <a
+                    className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:border-[#028FC1]"
+                    href={item.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <ExternalLink size={15} />
+                    Open
+                  </a>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DemoToolsScreen({
   scenario,
   transactions,
   suspendedSales,
   onBack,
+  onInternalResources,
+  onPresentation,
   onRefundDecision,
   onScenarioChange,
   onReset,
@@ -4807,6 +5278,8 @@ function DemoToolsScreen({
   transactions: Transaction[];
   suspendedSales: SuspendedSale[];
   onBack: () => void;
+  onInternalResources: () => void;
+  onPresentation: () => void;
   onRefundDecision: (transaction: Transaction, decision: "approve" | "reject") => void;
   onScenarioChange: (scenario: DemoScenario) => void;
   onReset: () => void;
@@ -4828,6 +5301,33 @@ function DemoToolsScreen({
       />
       <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <button
+              className="rounded-lg border border-sky-200 bg-white p-5 text-left hover:border-[#028FC1] hover:bg-sky-50"
+              onClick={onPresentation}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#028FC1] text-white">
+                <FileText size={20} />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">POS Strategy Presentation</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Internal HTML deck explaining the POS-first path toward Refund, Change, and RCMS.
+              </p>
+            </button>
+            <button
+              className="rounded-lg border border-slate-200 bg-white p-5 text-left hover:border-[#028FC1] hover:bg-slate-50"
+              onClick={onInternalResources}
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slate-900 text-white">
+                <Settings size={20} />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">Internal Resources</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Placeholder hub for demo videos, RCMS notes, documents, and prototype links.
+              </p>
+            </button>
+          </div>
+
           <div className="rounded-lg border border-slate-200 bg-white p-5">
             <h3 className="font-semibold">Scenario Switcher</h3>
             <p className="mt-1 text-sm text-slate-500">
@@ -5577,6 +6077,8 @@ export default function App() {
             suspendedSales={suspendedSales}
             transactions={transactionHistory}
             onBack={() => setScreen("home")}
+            onInternalResources={() => setScreen("internal-resources")}
+            onPresentation={() => setScreen("pos-strategy-presentation")}
             onRefundDecision={decideRefund}
             onReset={resetDemoData}
             onScenarioChange={applyDemoScenario}
@@ -5584,6 +6086,22 @@ export default function App() {
             onSeedStudents={() => setSaleNotice(`${students.length} Siam Branch student records are already loaded.`)}
             onSeedSuspended={seedSuspendedSales}
             onSeedTransactions={seedTransactions}
+          />
+        );
+      case "pos-strategy-presentation":
+        return (
+          <PosStrategyPresentationScreen
+            onBack={() => setScreen("demo-tools")}
+            onHome={() => setScreen("home")}
+            onOpenDemo={() => setScreen("home")}
+          />
+        );
+      case "internal-resources":
+        return (
+          <InternalResourcesScreen
+            onBack={() => setScreen("demo-tools")}
+            onHome={() => setScreen("home")}
+            onPresentation={() => setScreen("pos-strategy-presentation")}
           />
         );
       default:

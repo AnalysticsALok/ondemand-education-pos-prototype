@@ -14,6 +14,7 @@ The prototype is not a backend implementation and not an MVP. It exists to commu
 - Keep the interface easy to learn for new staff.
 - Demonstrate realistic workflows with realistic mock data.
 - Provide a realistic Siam Branch stakeholder demo environment with structured demo data.
+- Provide an internal stakeholder presentation explaining the POS-first strategy toward Void, Refund, Change, and RCMS.
 - Prioritize enterprise usability over visual decoration.
 
 ## Users
@@ -289,6 +290,8 @@ Secondary stakeholders include branch managers, product owners, operations teams
 - Demo student profiles include realistic schools, parent information, delivery addresses, alerts, promotions, and purchase history behavior.
 - Hidden Demo Tools page available from Settings.
 - Demo Tools supports:
+  - POS Strategy Presentation
+  - Internal Resources product hub
   - Reset Demo Data
   - Generate Fresh Demo Data
   - Switch Demo Scenario
@@ -296,6 +299,33 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - Seed Students
   - Seed Pending Payments
   - Seed Suspended Sales
+- POS Strategy Presentation is an in-app HTML-style stakeholder deck with standard scroll mode and Presentation Mode.
+- Presentation Mode shows one slide at a time, hides normal navigation behind a focused presentation overlay, supports Next/Previous controls, Left/Right keyboard arrows, Escape to exit, progress indicator, and slide number.
+- POS Strategy Presentation explains:
+  - Education POS First
+  - RCMS cases and dependencies
+  - Why RCMS remains important but should be delivered incrementally
+  - POS-first as a lower-risk delivery strategy
+  - Education POS to Void to Full Refund to More Refund Cases to Change Cases to Advanced RCMS
+  - Void versus Refund operating language
+  - Prototype demo checklist
+  - Decision alignment
+- Internal Resources is an internal product hub for Product Managers, Developers, QA, Operations, and stakeholders.
+- Internal Resources includes external links grouped by:
+  - Project Documents
+  - Design
+  - Demo
+  - Testing
+  - Technical
+  - Business Process
+- Internal Resources highlights:
+  - POS Strategy Presentation
+  - RCMS Demo Videos
+  - Operation Training Videos
+  - Refund & Change Notes and policy references
+  - Future Integration Notes
+  - Prototype and testing links
+- Speaker notes for the POS Strategy Presentation live in `docs/POS_STRATEGY_PRESENTATION_NOTES.md`.
 - `Cmd K` / `Ctrl K` focuses global search.
 - Smart recommendation panel in the cart based on mock product logic.
 - Manual discount workflow with manager approval.
@@ -408,6 +438,18 @@ Secondary stakeholders include branch managers, product owners, operations teams
 2. Order Summary shows products, discounts, promotions, delivery requirement, and total.
 3. Order Summary is not a receipt.
 4. Staff continues to Payment.
+
+## Internal Presentation Flow
+
+1. Staff or stakeholder opens Demo Tools from Settings.
+2. Staff selects POS Strategy Presentation.
+3. System opens an internal slide-like HTML presentation inside the POS app.
+4. Presenter explains the POS-first strategy verbally using minimal slide content.
+5. Presenter can start Presentation Mode to show one slide at a time.
+6. Presentation Mode supports Next, Previous, Left/Right keyboard arrows, Escape to exit, progress, and slide number.
+7. Presenter can return to Demo Tools, return to POS Home, or open the POS Demo from the prototype demo slide.
+8. Staff can also open Internal Resources from Demo Tools.
+9. Internal Resources shows grouped cards with external links for project documents, design, demo, testing, technical, and business process references.
 
 ## Suspend And Resume Sale Flow
 
@@ -666,12 +708,11 @@ Secondary stakeholders include branch managers, product owners, operations teams
 ## Wishlist
 
 - Scenario switcher for stakeholder demos.
-- Presentation mode with guided flow labels.
+- Presentation export support if stakeholders later need an offline deck.
 - Keyboard shortcuts for high-frequency actions.
 - Multi-student cart assignment.
 - Split payment or mixed payment methods.
 - Discount and promotion rule preview.
-- Stakeholder demo script and presenter notes.
 - Staff shift/session state.
 - Manager approval modal with realistic approval state.
 - Payment failure and retry flow.
@@ -680,6 +721,7 @@ Secondary stakeholders include branch managers, product owners, operations teams
 ## Known Improvements
 
 - Break `app/page.tsx` into reusable component files as the prototype grows.
+- Extract presentation slide content into a separate content module if the internal deck grows.
 - Add automated browser flow tests once a project-local Playwright dependency is installed.
 - Expand responsive testing beyond Home.
 - Add better state persistence for demo continuity.
@@ -699,6 +741,7 @@ Secondary stakeholders include branch managers, product owners, operations teams
 - Branch inventory indicators.
 - Product recommendation bundles.
 - Audit trail for voids and manager approval.
+- Advanced RCMS capabilities after POS, Void, Refund Request, Change, and integration scope are validated.
 
 # Decisions
 
@@ -863,6 +906,12 @@ Reason: Stakeholders need to see the full sale lifecycle. Receipt detail, reprin
 Decision: The project uses standard Next.js scripts and removes unused Cloudflare Worker, D1, Drizzle, and vinext starter artifacts.
 
 Reason: Stakeholder demo deployment should be simple and reliable on Vercel. The prototype is frontend-only and does not need backend/database setup.
+
+## Add POS-First Strategy Presentation
+
+Decision: Keep an internal HTML-style presentation inside Demo Tools explaining Education POS as the first delivery step toward Void, Refund, Change, and Advanced RCMS.
+
+Reason: POS-first is a lower-risk incremental delivery strategy. It lets stakeholders discuss scope and value without framing RCMS as wrong or forcing the full RCMS scope into the first release.
 
 ## Maintenance Rule
 
