@@ -72,11 +72,19 @@ type TransactionStatus =
   | "Pending Payment"
   | "Cancelled"
   | "Refund Requested"
-  | "Refund Approved"
-  | "Refund Processing"
-  | "Refunded";
-type RefundStatus = "Refund Requested" | "Refund Approved" | "Refund Processing" | "Refunded";
+  | "Refund Approved / Sent to Accounting";
+type CompletedTransactionStatus = "Paid" | "SMS sent";
+type RefundStatus = "Refund Requested" | "Refund Approved / Sent to Accounting" | "Refund Rejected";
 type BadgeTone = "slate" | "sky" | "green" | "amber" | "red" | "violet";
+type TransactionFilter =
+  | "All"
+  | "Completed"
+  | "Pending Payment"
+  | "Suspended"
+  | "Voided"
+  | "Refund Requested"
+  | "Sent to Accounting"
+  | "Refund Rejected";
 
 type DeliveryAddress = {
   id: string;
@@ -145,16 +153,21 @@ type DiscountApproval = {
 
 type RefundInfo = {
   status: RefundStatus;
+  originalStatus: CompletedTransactionStatus;
   reason: string;
   note: string;
   requestedBy: string;
   managerApproval: string;
   requestedAt: string;
   amount: number;
+  decisionBy?: string;
+  decisionAt?: string;
+  decisionNote?: string;
   activity: Array<{
     status: RefundStatus;
     time: string;
     staff: string;
+    note?: string;
   }>;
 };
 
@@ -726,7 +739,153 @@ function createDemoTransactions(seedTransactions: Transaction[], roster: Student
   const generated = Array.from({ length: Math.max(target, 0) }, (_, index) =>
     createTransactionFromSeed(index, roster[index % roster.length], catalog, scenario),
   );
-  return [...seedTransactions, ...generated];
+  return applyDemoRefundCases([...seedTransactions, ...generated]);
+}
+
+function applyDemoRefundCases(transactions: Transaction[]) {
+  const refundCases: Array<{
+    receipt: string;
+    status: RefundStatus;
+    reason: string;
+    note: string;
+    requestedAt: string;
+    decisionAt?: string;
+    decisionBy?: string;
+    decisionNote?: string;
+  }> = [
+    {
+      receipt: "RC-260706-0188",
+      status: "Refund Requested",
+      reason: "Wrong course purchased",
+      note: "Parent requested change after reviewing syllabus.",
+      requestedAt: "6 Jul 2026, 14:42",
+    },
+    {
+      receipt: "RC-260706-0187",
+      status: "Refund Requested",
+      reason: "Customer changed mind",
+      note: "Student decided to wait for the next course cycle.",
+      requestedAt: "6 Jul 2026, 13:35",
+    },
+    {
+      receipt: "RC-260706-0186",
+      status: "Refund Requested",
+      reason: "Duplicate purchase",
+      note: "Walk-in later found an existing active course on another account.",
+      requestedAt: "6 Jul 2026, 12:58",
+    },
+    {
+      receipt: "RC-260706-2001",
+      status: "Refund Approved / Sent to Accounting",
+      reason: "Payment issue",
+      note: "Duplicate card authorization confirmed by terminal report.",
+      requestedAt: "6 Jul 2026, 11:30",
+      decisionAt: "6 Jul 2026, 11:46",
+      decisionBy: "Demo Approver",
+      decisionNote: "Refund request approved and handed over to Accounting.",
+    },
+    {
+      receipt: "RC-260706-2002",
+      status: "Refund Approved / Sent to Accounting",
+      reason: "Wrong course purchased",
+      note: "Grade level mismatch confirmed by branch manager.",
+      requestedAt: "6 Jul 2026, 10:40",
+      decisionAt: "6 Jul 2026, 11:02",
+      decisionBy: "Demo Approver",
+      decisionNote: "Refund request approved and handed over to Accounting.",
+    },
+    {
+      receipt: "RC-260706-2003",
+      status: "Refund Approved / Sent to Accounting",
+      reason: "Course not suitable",
+      note: "Counselor confirmed replacement is not available this cycle.",
+      requestedAt: "6 Jul 2026, 10:15",
+      decisionAt: "6 Jul 2026, 10:33",
+      decisionBy: "Demo Approver",
+      decisionNote: "Refund request approved and handed over to Accounting.",
+    },
+    {
+      receipt: "RC-260706-2004",
+      status: "Refund Approved / Sent to Accounting",
+      reason: "Customer changed mind",
+      note: "Approved as exception during promotion week.",
+      requestedAt: "6 Jul 2026, 09:52",
+      decisionAt: "6 Jul 2026, 10:12",
+      decisionBy: "Demo Approver",
+      decisionNote: "Refund request approved and handed over to Accounting.",
+    },
+    {
+      receipt: "RC-260706-2005",
+      status: "Refund Rejected",
+      reason: "Customer changed mind",
+      note: "Digital course already activated and viewed.",
+      requestedAt: "6 Jul 2026, 09:20",
+      decisionAt: "6 Jul 2026, 09:40",
+      decisionBy: "Demo Approver",
+      decisionNote: "Rejected because activation and first lesson usage were already confirmed.",
+    },
+    {
+      receipt: "RC-260706-2006",
+      status: "Refund Rejected",
+      reason: "Duplicate purchase",
+      note: "Branch verified this is a different sibling account.",
+      requestedAt: "5 Jul 2026, 17:18",
+      decisionAt: "5 Jul 2026, 17:35",
+      decisionBy: "Demo Approver",
+      decisionNote: "Rejected after student account ownership review.",
+    },
+    {
+      receipt: "RC-260706-2007",
+      status: "Refund Rejected",
+      reason: "Course not suitable",
+      note: "Refund window not eligible for this demo case.",
+      requestedAt: "5 Jul 2026, 16:42",
+      decisionAt: "5 Jul 2026, 16:58",
+      decisionBy: "Demo Approver",
+      decisionNote: "Rejected by manager review.",
+    },
+  ];
+
+  const casesByReceipt = new Map(refundCases.map((item) => [item.receipt, item]));
+  return transactions.map((transaction) => {
+    const refundCase = casesByReceipt.get(transaction.id);
+    if (!refundCase || (transaction.status !== "Paid" && transaction.status !== "SMS sent")) return transaction;
+    const originalStatus = transaction.status as CompletedTransactionStatus;
+    const activity: RefundInfo["activity"] = [
+      {
+        status: "Refund Requested" as RefundStatus,
+        time: refundCase.requestedAt,
+        staff: staffName,
+        note: refundCase.note,
+      },
+    ];
+    if (refundCase.status !== "Refund Requested" && refundCase.decisionAt) {
+      activity.push({
+        status: refundCase.status,
+        time: refundCase.decisionAt,
+        staff: refundCase.decisionBy ?? "Demo Approver",
+        note: refundCase.decisionNote,
+      });
+    }
+    return {
+      ...transaction,
+      status: refundCase.status === "Refund Rejected" ? originalStatus : refundCase.status,
+      refund: {
+        status: refundCase.status,
+        originalStatus,
+        reason: refundCase.reason,
+        note: refundCase.note,
+        requestedBy: staffName,
+        managerApproval: "PIN **34",
+        requestedAt: refundCase.requestedAt,
+        amount: transaction.total,
+        decisionBy: refundCase.decisionBy,
+        decisionAt: refundCase.decisionAt,
+        decisionNote: refundCase.decisionNote,
+        activity,
+      },
+    };
+  });
 }
 
 function createDemoSuspendedSales(seedSales: SuspendedSale[], roster: Student[], catalog: Product[], scenario: DemoScenario) {
@@ -895,7 +1054,7 @@ function duplicatePurchaseForStudent(
 ) {
   if (!student) return null;
   const transaction = transactionsForStudent(transactions, student)
-    .filter((item) => item.status !== "Voided" && item.status !== "Cancelled" && item.status !== "Refunded")
+    .filter((item) => item.status !== "Voided" && item.status !== "Cancelled")
     .find((item) => item.items.some((purchased) => purchased.productId === product.id));
   if (!transaction) return null;
   return {
@@ -912,8 +1071,8 @@ function studentTimeline(
 ) {
   const events = [
     ...transactionsForStudent(transactions, student).flatMap((transaction) => {
-      const transactionEvents = transaction.items.map((item) => ({
-        id: `${transaction.id}-${item.productId}`,
+      const transactionEvents = transaction.items.map((item, index) => ({
+        id: `${transaction.id}-${item.productId}-${index}`,
         time: `6 Jul 2026, ${transaction.time}`,
         title:
           item.type === "Book"
@@ -923,12 +1082,9 @@ function studentTimeline(
               : "Course purchased",
         detail: `${item.name} | ${transaction.id}`,
         status:
-          transaction.status === "Refunded"
-            ? "Refunded"
-            : transaction.status.startsWith("Refund")
-              ? transaction.status
-              :
-          transaction.status === "Voided"
+          transaction.status.startsWith("Refund")
+            ? transaction.status
+            : transaction.status === "Voided"
             ? "Transaction voided"
             : transaction.status === "Pending Payment"
               ? "Pending Payment"
@@ -946,11 +1102,9 @@ function studentTimeline(
         title:
           event.status === "Refund Requested"
             ? "Refund requested"
-            : event.status === "Refund Approved"
-              ? "Refund approved"
-              : event.status === "Refunded"
-                ? "Refunded"
-                : "Refund processing",
+            : event.status === "Refund Approved / Sent to Accounting"
+              ? "Refund approved and sent to Accounting"
+              : "Refund rejected",
         detail: `${transaction.id} | ${money(transaction.refund?.amount ?? transaction.total)} | ${transaction.refund?.reason ?? "Refund"}`,
         status: event.status,
       })) ?? [];
@@ -1025,7 +1179,7 @@ function productFromItem(item: TransactionItem) {
 function recentSoldProducts(transactions: Transaction[]) {
   const seen = new Set<string>();
   return transactions
-    .filter((transaction) => transaction.status !== "Voided" && transaction.status !== "Cancelled" && transaction.status !== "Refunded")
+    .filter((transaction) => transaction.status !== "Voided" && transaction.status !== "Cancelled")
     .flatMap((transaction) => transaction.items)
     .map(productFromItem)
     .filter((product): product is Product => Boolean(product))
@@ -1115,21 +1269,24 @@ function maskPhone(phone: string) {
 
 function transactionStatusTone(status: TransactionStatus): BadgeTone {
   if (status === "Voided" || status === "Cancelled") return "red";
-  if (status === "Refunded") return "violet";
+  if (status === "Refund Approved / Sent to Accounting") return "green";
   if (status.startsWith("Refund")) return "amber";
   if (status === "Pending Payment") return "amber";
   if (status === "SMS sent") return "sky";
   return "green";
 }
 
+function transactionDisplayStatus(transaction: Transaction): TransactionStatus | RefundStatus {
+  return transaction.refund?.status ?? transaction.status;
+}
+
 function isRefundEligible(transaction: Transaction) {
-  return transaction.status === "Paid" || transaction.status === "SMS sent";
+  return (transaction.status === "Paid" || transaction.status === "SMS sent") && !transaction.refund;
 }
 
 function refundStatusTone(status: RefundStatus): BadgeTone {
-  if (status === "Refunded") return "violet";
-  if (status === "Refund Approved") return "green";
-  if (status === "Refund Processing") return "sky";
+  if (status === "Refund Approved / Sent to Accounting") return "green";
+  if (status === "Refund Rejected") return "red";
   return "amber";
 }
 
@@ -1139,8 +1296,9 @@ function isCompletedTransaction(transaction: Transaction) {
 
 function dashboardMetrics(transactions: Transaction[], suspendedSales: SuspendedSale[]) {
   const completed = transactions.filter(isCompletedTransaction);
-  const refunded = transactions.filter((transaction) => transaction.status === "Refunded");
   const refundRequested = transactions.filter((transaction) => transaction.status === "Refund Requested");
+  const refundApproved = transactions.filter((transaction) => transaction.refund?.status === "Refund Approved / Sent to Accounting");
+  const refundRejected = transactions.filter((transaction) => transaction.refund?.status === "Refund Rejected");
   const revenue = completed.reduce((sum, transaction) => sum + transaction.total, 0);
   const topProductCounts = new Map<string, { name: string; count: number }>();
   const productMixCounts = new Map<ProductType, number>([
@@ -1189,9 +1347,9 @@ function dashboardMetrics(transactions: Transaction[], suspendedSales: Suspended
           title:
             event.status === "Refund Requested"
               ? "Refund requested"
-              : event.status === "Refunded"
-                ? "Refunded"
-                : event.status.toLowerCase(),
+              : event.status === "Refund Approved / Sent to Accounting"
+                ? "Refund approved and sent to Accounting"
+                : "Refund rejected",
           detail: `${transaction.id} | ${money(transaction.refund?.amount ?? transaction.total)}`,
           tone: refundStatusTone(event.status),
         });
@@ -1227,7 +1385,8 @@ function dashboardMetrics(transactions: Transaction[], suspendedSales: Suspended
       suspended: suspendedSales.length,
       voided: transactions.filter((transaction) => transaction.status === "Voided").length,
       refundRequested: refundRequested.length,
-      refunded: refunded.length,
+      refundApproved: refundApproved.length,
+      refundRejected: refundRejected.length,
     },
     pendingActions: {
       pendingPayments: transactions.filter((transaction) => transaction.status === "Pending Payment"),
@@ -1240,8 +1399,8 @@ function dashboardMetrics(transactions: Transaction[], suspendedSales: Suspended
     recentActivity: events,
     refundSummary: {
       requestedCount: refundRequested.length,
-      refundedCount: refunded.length,
-      refundedAmount: refunded.reduce((sum, transaction) => sum + (transaction.refund?.amount ?? transaction.total), 0),
+      approvedCount: refundApproved.length,
+      rejectedCount: refundRejected.length,
       latestRequest: refundRequested[0] ?? transactions.find((transaction) => transaction.refund),
     },
   };
@@ -1599,8 +1758,8 @@ function SearchGroup({
 
 function StudentBanner({ student }: { student: Student }) {
   return (
-    <div className="sticky top-[65px] z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-6 py-3">
+    <div className="border-b border-slate-200 bg-white/95 backdrop-blur md:sticky md:top-[65px] md:z-10">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-base font-semibold">{student.name}</h2>
@@ -1626,7 +1785,7 @@ function StudentBanner({ student }: { student: Student }) {
 
 function SystemStatus({ branch }: { branch: string }) {
   return (
-    <footer className="border-t border-slate-200 bg-white px-6 py-2 text-xs text-slate-600 md:fixed md:bottom-0 md:left-0 md:right-0 md:z-20">
+    <footer className="border-t border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 sm:px-6 md:fixed md:bottom-0 md:left-0 md:right-0 md:z-20">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-4">
           <StatusItem icon={<Wifi size={14} />} label="Branch online" />
@@ -1689,8 +1848,8 @@ function Header({
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-[1480px] items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-4">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <button
             className="flex h-10 w-10 items-center justify-center rounded-md bg-[#028FC1] text-white"
             onClick={onHome}
@@ -1703,7 +1862,7 @@ function Header({
             <label className="sr-only" htmlFor="branch-select">Current branch</label>
             <select
               id="branch-select"
-              className="mt-0.5 rounded-md border border-transparent bg-white text-xl font-semibold tracking-tight outline-none hover:border-slate-200 focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100"
+              className="mt-0.5 max-w-[220px] rounded-md border border-transparent bg-white text-lg font-semibold tracking-tight outline-none hover:border-slate-200 focus:border-[#028FC1] focus:ring-2 focus:ring-sky-100 sm:max-w-none sm:text-xl"
               value={branch}
               onChange={(event) => onBranchChange(event.target.value)}
             >
@@ -1723,14 +1882,14 @@ function Header({
           onTransactionSelect={onTransactionSelect}
         />
 
-        <div className="flex items-center gap-3 text-sm text-slate-600">
+        <div className="flex w-full flex-wrap items-center gap-2 text-sm text-slate-600 sm:w-auto sm:gap-3 sm:justify-end">
           {activeStudent && (
             <span className="hidden max-w-[180px] truncate font-semibold text-slate-900 xl:inline">
               {activeStudent.name}
             </span>
           )}
           <button
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 font-semibold text-amber-900"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 font-semibold text-amber-900"
             onClick={onSuspendedSales}
           >
             <PauseCircle size={16} />
@@ -1740,7 +1899,7 @@ function Header({
             </span>
           </button>
           <button
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 font-semibold text-sky-900"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-sky-300 bg-sky-50 px-3 font-semibold text-sky-900"
             onClick={onPendingPayments}
           >
             <QrCode size={16} />
@@ -1750,18 +1909,18 @@ function Header({
             </span>
           </button>
           <button
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
             onClick={onDashboard}
           >
             <LayoutDashboard size={16} />
             Dashboard
           </button>
           <button
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-800"
             onClick={onTransactions}
           >
             <History size={16} />
-            Recent
+            Transactions
           </button>
           <IconButton icon={<Settings size={15} />} label="Demo Tools" onClick={onDemoTools} />
           <span className="hidden md:inline">Staff: {staffName}</span>
@@ -1808,7 +1967,7 @@ function CartPanel({
   const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
 
   return (
-    <aside className="flex h-[calc(100vh-132px)] min-h-[520px] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white xl:sticky xl:top-[118px] xl:h-[calc(100vh-142px)]">
+    <aside className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white xl:sticky xl:top-[118px] xl:h-[calc(100vh-142px)] xl:min-h-[520px]">
       <div className="shrink-0 border-b border-slate-200 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Current sale</h2>
@@ -2018,7 +2177,7 @@ function HomeScreen({
   onResumeSale: (sale: SuspendedSale) => void;
 }) {
   return (
-    <div className="mx-auto grid max-w-[1180px] gap-5 px-6 py-6 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid max-w-[1180px] gap-5 px-4 py-6 lg:grid-cols-[1fr_360px]">
       <section className="space-y-5">
         {saleNotice && (
           <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm font-medium text-sky-900">
@@ -2154,9 +2313,9 @@ function HomeScreen({
 
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Recent transactions</h2>
+            <h2 className="font-semibold">Transactions</h2>
             <SecondaryButton icon={<History size={16} />} onClick={onTransactions}>
-              View all
+              Open Transactions
             </SecondaryButton>
           </div>
           <div className="mt-4 space-y-2">
@@ -2198,7 +2357,7 @@ function StudentSearchScreen({
   const isSearching = query.trim().length > 0;
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Existing student"
@@ -2303,9 +2462,7 @@ function StudentProfileScreen({
         purchaseDate: `6 Jul 2026, ${transaction.time}`,
         receiptId: transaction.id,
         status:
-          transaction.status === "Refunded"
-            ? "Refunded"
-            : transaction.status.startsWith("Refund")
+          transaction.status.startsWith("Refund")
               ? transaction.status
               : item.type === "Live Class"
             ? "Upcoming Live Class"
@@ -2320,7 +2477,7 @@ function StudentProfileScreen({
     );
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
       <ScreenTitle
         action={
           <div className="flex gap-2">
@@ -2443,7 +2600,7 @@ function NewStudentScreen({
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="New student / walk-in"
@@ -2589,7 +2746,7 @@ function CatalogScreen({
   });
 
   return (
-    <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-5 px-6 py-5 xl:grid-cols-[1fr_380px]">
+    <div className="mx-auto grid max-w-[1480px] grid-cols-1 gap-5 px-4 py-5 xl:grid-cols-[1fr_380px]">
       <section className="min-w-0 space-y-5">
         {activeStudent && (
           <div className="flex justify-end">
@@ -2747,7 +2904,7 @@ function PaymentScreen({
   const canPay = method !== "Cash" || receivedNumber >= totals.total;
 
   return (
-    <div className="mx-auto max-w-[1280px] px-6 py-6">
+    <div className="mx-auto max-w-[1280px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Cart</SecondaryButton>}
         eyebrow="Payment"
@@ -2893,7 +3050,7 @@ function SuccessScreen({
   const [successNotice, setSuccessNotice] = useState("");
 
   return (
-    <div className="mx-auto max-w-[980px] px-6 py-8">
+    <div className="mx-auto max-w-[980px] px-4 py-8">
       <section className="rounded-lg border border-emerald-200 bg-white p-6">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
@@ -2929,8 +3086,8 @@ function SuccessScreen({
         )}
 
         <div className="mt-6 grid gap-3 md:grid-cols-5">
-          <SecondaryButton icon={<Printer size={17} />} onClick={() => setSuccessNotice(`Print receipt queued for ${receiptId}.`)}>Print Receipt</SecondaryButton>
-          <SecondaryButton icon={<FileText size={17} />} onClick={onReceiptPreview}>Preview</SecondaryButton>
+          <SecondaryButton icon={<Printer size={17} />} onClick={onReceiptPreview}>Print Receipt</SecondaryButton>
+          <SecondaryButton icon={<FileText size={17} />} onClick={onReceiptPreview}>Receipt Preview</SecondaryButton>
           <SecondaryButton icon={<MessageSquareText size={17} />} onClick={() => setSuccessNotice(`SMS resend queued for ${maskPhone(activeStudent?.phone ?? "")}.`)}>Send SMS Again</SecondaryButton>
           <SecondaryButton icon={<User size={17} />} onClick={onProfile}>View Profile</SecondaryButton>
           <PrimaryButton icon={<RotateCcw size={17} />} onClick={onNewSale}>Start New Sale</PrimaryButton>
@@ -2962,7 +3119,7 @@ function SuspendedSalesScreen({
   );
 
   return (
-    <div className="mx-auto max-w-[1380px] px-6 py-6">
+    <div className="mx-auto max-w-[1380px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Operations queue"
@@ -3053,7 +3210,7 @@ function SuspendedSaleDetailScreen({
   const totals = calculateTotals(sale.cart, sale.discountApproval?.amount ?? 0);
 
   return (
-    <div className="mx-auto max-w-[980px] px-6 py-6">
+    <div className="mx-auto max-w-[980px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back to Queue</SecondaryButton>}
         eyebrow="Suspended sale detail"
@@ -3165,7 +3322,7 @@ function DeliveryInfoScreen({
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Checkout"
@@ -3309,7 +3466,7 @@ function OrderSummaryScreen({
   const totals = calculateTotals(cart, discountApproval?.amount ?? 0);
 
   return (
-    <div className="mx-auto max-w-[980px] px-6 py-6">
+    <div className="mx-auto max-w-[980px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Pre-payment"
@@ -3377,63 +3534,126 @@ function ReceiptPreviewScreen({
   cart,
   deliveryAddress,
   receiptId,
+  transaction,
   total,
   onBack,
+  onStartNewSale,
 }: {
   activeStudent: Student | null;
   cart: CartLine[];
   deliveryAddress: DeliveryAddress | null;
   receiptId: string;
+  transaction?: Transaction;
   total: number;
   onBack: () => void;
+  onStartNewSale?: () => void;
 }) {
   const [receiptNotice, setReceiptNotice] = useState("");
   function mockReceiptAction(action: string) {
     setReceiptNotice(`${action} queued for ${receiptId}.`);
   }
+  const receiptStudent = transaction ? studentFromTransaction(transaction) : activeStudent;
+  const receiptItems = transaction
+    ? transaction.items.map((item) => ({
+        id: item.productId,
+        name: item.name,
+        type: item.type,
+        group: productFromItem(item)?.subject ?? item.type,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        discount: item.discount,
+        total: item.price * item.quantity - item.discount * item.quantity,
+      }))
+    : cart.map((line) => ({
+        id: line.lineId,
+        name: line.product.name,
+        type: line.product.type,
+        group: line.product.subject,
+        quantity: line.quantity,
+        unitPrice: line.product.price,
+        discount: line.discount,
+        total: line.product.price * line.quantity - line.discount * line.quantity,
+      }));
+  const subtotal = receiptItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const discount = receiptItems.reduce((sum, item) => sum + item.discount * item.quantity, 0);
+  const grandTotal = transaction?.total ?? total;
+  const tax = Math.max(grandTotal - Math.max(subtotal - discount, 0), 0);
+  const receiptDeliveryAddress = transaction?.deliveryAddress ?? deliveryAddress;
+  const paymentMethod = transaction?.method ?? "Completed payment";
+  const paymentStatus = transaction?.status ?? (receiptStudent?.isNew ? "SMS sent" : "Paid");
+  const receiptDate = transaction ? `6 Jul 2026, ${transaction.time}` : "6 Jul 2026, 14:33";
+  const receiptStaff = transaction?.staff ?? staffName;
+  const hasPhysicalBook = receiptItems.some((item) => item.type === "Book");
 
   return (
-    <div className="mx-auto max-w-[980px] px-6 py-6">
+    <div className="receipt-preview-page mx-auto max-w-[980px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Receipt"
         title="Receipt Preview"
       />
       <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
-        <section className="rounded-lg border border-slate-300 bg-white p-8 font-mono text-sm">
+        <section className="printable-receipt rounded-lg border border-slate-300 bg-white p-8 font-mono text-sm">
           <div className="text-center">
             <p className="text-lg font-bold">OnDemand Thailand</p>
+            <p>Business Unit: OnDemand Education</p>
             <p>Siam Branch</p>
             <p>{receiptId}</p>
-            <p>6 Jul 2026, 14:33</p>
+            <p>{receiptDate}</p>
           </div>
           <div className="my-5 border-t border-dashed border-slate-300" />
-          <p>Student: {activeStudent?.name}</p>
-          <p>Phone: {activeStudent?.phone}</p>
+          <p>Staff: {receiptStaff}</p>
+          <p>Student: {receiptStudent?.name ?? transaction?.student ?? "No student"}</p>
+          {receiptStudent && !receiptStudent.isNew && <p>Student ID: {receiptStudent.id}</p>}
+          <p>Phone: {receiptStudent?.phone ?? transaction?.phone}</p>
           <div className="my-5 border-t border-dashed border-slate-300" />
-          {cart.map((line) => (
-            <div className="mb-3 flex justify-between gap-4" key={line.lineId}>
-              <span>{line.product.name} x{line.quantity}</span>
-              <span>{money(line.product.price * line.quantity)}</span>
+          {receiptItems.map((item, index) => (
+            <div className="mb-3" key={`${item.id}-${index}`}>
+              <div className="flex justify-between gap-4">
+                <span>{item.name}</span>
+                <span>{money(item.total)}</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                {item.type} | BU/Product Group: {item.group} | Qty {item.quantity} | Unit {money(item.unitPrice)} | Discount {money(item.discount * item.quantity)}
+              </p>
             </div>
           ))}
-          {deliveryAddress && (
+          {receiptDeliveryAddress && (
             <>
               <div className="my-5 border-t border-dashed border-slate-300" />
-              <p>Delivery: {deliveryAddress.recipient}</p>
-              <p>{deliveryAddress.phone}</p>
-              <p>{deliveryAddress.address}</p>
-              <p>{deliveryAddress.estimate}</p>
+              <p>Delivery: {receiptDeliveryAddress.recipient}</p>
+              <p>{receiptDeliveryAddress.phone}</p>
+              <p>{receiptDeliveryAddress.address}</p>
+              <p>{receiptDeliveryAddress.method}</p>
+              <p>{receiptDeliveryAddress.estimate}</p>
             </>
           )}
           <div className="my-5 border-t border-dashed border-slate-300" />
-          <div className="flex justify-between text-lg font-bold">
-            <span>TOTAL</span>
-            <span>{money(total)}</span>
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>{money(subtotal)}</span>
           </div>
+          <div className="mt-2 flex justify-between">
+            <span>Discount</span>
+            <span>-{money(discount)}</span>
+          </div>
+          <div className="mt-2 flex justify-between">
+            <span>Tax</span>
+            <span>{money(tax)}</span>
+          </div>
+          <div className="flex justify-between text-lg font-bold">
+            <span>GRAND TOTAL</span>
+            <span>{money(grandTotal)}</span>
+          </div>
+          <div className="my-5 border-t border-dashed border-slate-300" />
+          <p>Payment Method: {paymentMethod}</p>
+          <p>Payment Status: {paymentStatus}</p>
+          {transaction?.refund && <p>Refund Status: {transaction.refund.status}</p>}
+          {hasPhysicalBook && !receiptDeliveryAddress && <p>Delivery Note: Address will be collected during activation.</p>}
+          {receiptStudent?.isNew && <p>SMS Activation: Activation link sent to {maskPhone(receiptStudent.phone)}.</p>}
           <p className="mt-5 text-center">Thank you</p>
         </section>
-        <aside className="rounded-lg border border-slate-200 bg-white p-4">
+        <aside className="receipt-actions rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="font-semibold">Receipt Actions</h2>
           {receiptNotice && (
             <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">
@@ -3441,7 +3661,9 @@ function ReceiptPreviewScreen({
             </div>
           )}
           <div className="mt-4 grid gap-3">
-            <PrimaryButton icon={<Printer size={17} />} onClick={() => mockReceiptAction("Print receipt")}>Print Receipt</PrimaryButton>
+            <PrimaryButton icon={<Printer size={17} />} onClick={() => window.print()}>Print Receipt</PrimaryButton>
+            <SecondaryButton icon={<ArrowLeft size={17} />} onClick={onBack}>Back to Transaction</SecondaryButton>
+            {onStartNewSale && <SecondaryButton icon={<Home size={17} />} onClick={onStartNewSale}>Start New Sale</SecondaryButton>}
             <SecondaryButton icon={<Download size={17} />} onClick={() => mockReceiptAction("PDF download")}>Download PDF</SecondaryButton>
             <SecondaryButton icon={<Mail size={17} />} onClick={() => mockReceiptAction("Email receipt")}>Email Receipt</SecondaryButton>
             <SecondaryButton icon={<MessageSquareText size={17} />} onClick={() => mockReceiptAction("SMS resend")}>Send SMS Again</SecondaryButton>
@@ -3471,7 +3693,7 @@ function DashboardScreen({
   const productMixTotal = metrics.productMix.reduce((sum, item) => sum + item.count, 0) || 1;
 
   return (
-    <div className="mx-auto max-w-[1480px] px-6 py-6">
+    <div className="mx-auto max-w-[1480px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back Home</SecondaryButton>}
         eyebrow="Experimental branch feature"
@@ -3497,7 +3719,8 @@ function DashboardScreen({
               <StatusCount label="Suspended" count={metrics.statuses.suspended} tone="amber" />
               <StatusCount label="Voided" count={metrics.statuses.voided} tone="red" />
               <StatusCount label="Refund Requested" count={metrics.statuses.refundRequested} tone="amber" />
-              <StatusCount label="Refunded" count={metrics.statuses.refunded} tone="violet" />
+              <StatusCount label="Sent to Accounting" count={metrics.statuses.refundApproved} tone="green" />
+              <StatusCount label="Refund Rejected" count={metrics.statuses.refundRejected} tone="red" />
             </div>
           </section>
 
@@ -3573,8 +3796,8 @@ function DashboardScreen({
             </div>
             <div className="mt-4 grid gap-3 text-sm">
               <Info label="Refund Requested" value={`${metrics.refundSummary.requestedCount} transactions`} />
-              <Info label="Refunded" value={`${metrics.refundSummary.refundedCount} transactions`} />
-              <Info label="Total Refunded Amount" value={money(metrics.refundSummary.refundedAmount)} />
+              <Info label="Sent to Accounting" value={`${metrics.refundSummary.approvedCount} transactions`} />
+              <Info label="Refund Rejected" value={`${metrics.refundSummary.rejectedCount} transactions`} />
               <Info
                 label="Latest Refund Request"
                 value={
@@ -3672,7 +3895,7 @@ function PendingPaymentsScreen({
   );
 
   return (
-    <div className="mx-auto max-w-[1280px] px-6 py-6">
+    <div className="mx-auto max-w-[1280px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Operations queue"
@@ -3736,28 +3959,78 @@ function PendingPaymentsScreen({
 
 function TransactionsScreen({
   transactions,
+  suspendedSales,
   onBack,
   onOpen,
+  onReceiptPreview,
+  onOpenSuspended,
 }: {
   transactions: Transaction[];
+  suspendedSales: SuspendedSale[];
   onBack: () => void;
   onOpen: (transaction: Transaction) => void;
+  onReceiptPreview: (transaction: Transaction) => void;
+  onOpenSuspended: (sale: SuspendedSale) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<TransactionFilter>("All");
   const isLoadingTransactions = query.trim().length > 0;
-  const filteredTransactions = transactions.filter((transaction) =>
+  const transactionMatchesFilter = (transaction: Transaction) => {
+    if (filter === "All") return true;
+    if (filter === "Completed") return isCompletedTransaction(transaction);
+    if (filter === "Pending Payment") return transaction.status === "Pending Payment";
+    if (filter === "Voided") return transaction.status === "Voided";
+    if (filter === "Refund Requested") return transaction.refund?.status === "Refund Requested";
+    if (filter === "Sent to Accounting") return transaction.refund?.status === "Refund Approved / Sent to Accounting";
+    if (filter === "Refund Rejected") return transaction.refund?.status === "Refund Rejected";
+    return false;
+  };
+  const filteredTransactions = filter === "Suspended" ? [] : transactions.filter((transaction) =>
+    transactionMatchesFilter(transaction) &&
     `${transaction.id} ${transaction.student} ${transaction.phone} ${transaction.items.map((item) => item.name).join(" ")}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+  const filteredSuspendedSales = filter === "Suspended"
+    ? suspendedSales.filter((sale) =>
+        `${sale.id} ${sale.student.name} ${sale.student.phone} ${sale.student.id} ${cartProductSummary(sale.cart)} ${sale.reason}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+      )
+    : [];
+  const filters: TransactionFilter[] = [
+    "All",
+    "Completed",
+    "Pending Payment",
+    "Suspended",
+    "Voided",
+    "Refund Requested",
+    "Sent to Accounting",
+    "Refund Rejected",
+  ];
 
   return (
-    <div className="mx-auto max-w-[1280px] px-6 py-6">
+    <div className="mx-auto max-w-[1280px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Operations"
-        title="Recent transactions"
+        title="Transactions"
       />
+      <div className="mb-4 flex flex-wrap gap-2">
+        {filters.map((item) => (
+          <button
+            className={`h-10 rounded-md border px-3 text-sm font-semibold ${
+              filter === item
+                ? "border-[#028FC1] bg-sky-50 text-[#027da9]"
+                : "border-slate-300 bg-white text-slate-700 hover:border-[#028FC1]"
+            }`}
+            key={item}
+            onClick={() => setFilter(item)}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
       <label className="relative mb-5 block">
         <Search className="absolute left-3 top-3 text-slate-400" size={18} />
         <input
@@ -3773,15 +4046,55 @@ function TransactionsScreen({
           Loading transaction history...
         </div>
       )}
+      {filter === "Suspended" ? (
+        <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          {filteredSuspendedSales.length === 0 ? (
+            <div className="p-8 text-center">
+              <PauseCircle className="mx-auto text-slate-400" size={32} />
+              <h3 className="mt-3 font-semibold">No Suspended Sales</h3>
+              <p className="mt-1 text-sm text-slate-500">Suspended sale cases will appear here when this filter is selected.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid min-w-[920px] grid-cols-[1.1fr_1fr_1.5fr_140px_130px_150px] border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+                <span>Case</span>
+                <span>Student</span>
+                <span>Products</span>
+                <span>Total</span>
+                <span>Status</span>
+                <span>Actions</span>
+              </div>
+              {filteredSuspendedSales.map((sale) => (
+                <div
+                  className="grid min-w-[920px] grid-cols-[1.1fr_1fr_1.5fr_140px_130px_150px] items-center border-b border-slate-100 px-4 py-3 text-sm last:border-0"
+                  key={sale.id}
+                >
+                  <span>
+                    <span className="block font-mono font-semibold">{sale.id}</span>
+                    <span className="text-xs text-slate-500">{sale.date}, {sale.time}</span>
+                  </span>
+                  <span>{sale.student.name}</span>
+                  <span className="truncate pr-4">{cartProductSummary(sale.cart)}</span>
+                  <span className="font-semibold">{money(suspendedSaleTotal(sale))}</span>
+                  <span><Badge tone="amber">Suspended</Badge></span>
+                  <span>
+                    <IconButton icon={<ReceiptText size={15} />} label="View" onClick={() => onOpenSuspended(sale)} />
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
+        </section>
+      ) : (
       <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
         {filteredTransactions.length === 0 ? (
           <div className="p-8 text-center">
             <ReceiptText className="mx-auto text-slate-400" size={32} />
             <h3 className="mt-3 font-semibold">
-              {query ? "No Matching Transactions" : "No Recent Transactions"}
+              {query ? "No Matching Transactions" : "No Transactions"}
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              {query ? "Try receipt number, student name, phone, or product." : "Completed sales will appear here after checkout."}
+              {query ? "Try receipt number, student name, phone, or product." : "Transactions will appear here after checkout."}
             </p>
           </div>
         ) : (
@@ -3807,13 +4120,13 @@ function TransactionsScreen({
             <span className="font-semibold">{money(transaction.total)}</span>
             <span>{transaction.method}</span>
             <span>
-              <Badge tone={transactionStatusTone(transaction.status)}>
-                {transaction.status}
+              <Badge tone={transaction.refund ? refundStatusTone(transaction.refund.status) : transactionStatusTone(transaction.status)}>
+                {transactionDisplayStatus(transaction)}
               </Badge>
             </span>
             <span className="flex gap-2">
               <IconButton icon={<ReceiptText size={15} />} label="View" onClick={() => onOpen(transaction)} />
-              <IconButton icon={<Printer size={15} />} label="Reprint" />
+              <IconButton icon={<Printer size={15} />} label="Receipt Preview" onClick={() => onReceiptPreview(transaction)} />
               <IconButton
                 disabled={transaction.status !== "Paid" && transaction.status !== "SMS sent"}
                 icon={<X size={15} />}
@@ -3826,6 +4139,7 @@ function TransactionsScreen({
           </>
         )}
       </section>
+      )}
     </div>
   );
 }
@@ -3834,28 +4148,19 @@ function TransactionDetailScreen({
   transaction,
   onBack,
   onDuplicate,
-  onProgressRefund,
   onRefund,
+  onReceiptPreview,
   onVoid,
 }: {
   transaction: Transaction;
   onBack: () => void;
   onDuplicate: () => void;
-  onProgressRefund: (transaction: Transaction) => void;
   onRefund: () => void;
+  onReceiptPreview: () => void;
   onVoid: () => void;
 }) {
-  const nextRefundStatus =
-    transaction.refund?.status === "Refund Requested"
-      ? "Refund Approved"
-      : transaction.refund?.status === "Refund Approved"
-        ? "Refund Processing"
-        : transaction.refund?.status === "Refund Processing"
-          ? "Refunded"
-          : null;
-
   return (
-    <div className="mx-auto max-w-[980px] px-6 py-6">
+    <div className="mx-auto max-w-[980px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Transaction detail"
@@ -3874,8 +4179,8 @@ function TransactionDetailScreen({
           )}
         </div>
         <div className="mt-5 rounded-lg border border-slate-200">
-          {transaction.items.map((item) => (
-            <div className="flex justify-between border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-${item.productId}`}>
+          {transaction.items.map((item, index) => (
+            <div className="flex justify-between border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-${item.productId}-${index}`}>
               <span>
                 <span className="block font-semibold">{item.name}</span>
                 <span className="text-xs text-slate-500">{item.type} | Qty {item.quantity}</span>
@@ -3905,14 +4210,17 @@ function TransactionDetailScreen({
                   <Info label="Manager Approval" value={transaction.refund.managerApproval} />
                   <Info label="Requested Date/Time" value={transaction.refund.requestedAt} />
                   <Info label="Refund Amount" value={money(transaction.refund.amount)} />
+                  <Info label="Demo Approver" value={transaction.refund.decisionBy ?? "Waiting for demo approval"} />
+                  <Info label="Approval/Rejection Time" value={transaction.refund.decisionAt ?? "Not decided yet"} />
+                  <Info label="Approval/Rejection Note" value={transaction.refund.decisionNote ?? "No decision note"} />
                 </div>
               </div>
-              {nextRefundStatus && (
-                <SecondaryButton icon={<RotateCcw size={16} />} onClick={() => onProgressRefund(transaction)}>
-                  Mark {nextRefundStatus}
-                </SecondaryButton>
-              )}
             </div>
+            {transaction.refund.status === "Refund Approved / Sent to Accounting" && (
+              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-900">
+                Refund request approved and handed over to Accounting.
+              </div>
+            )}
             <div className="mt-4 rounded-md border border-amber-200 bg-white p-3">
               <h4 className="text-sm font-semibold text-amber-950">Refund Activity</h4>
               <div className="mt-2 space-y-2">
@@ -3927,7 +4235,7 @@ function TransactionDetailScreen({
           </section>
         )}
         <div className="mt-5 flex flex-wrap gap-3">
-          <SecondaryButton icon={<Printer size={17} />}>Reprint Receipt</SecondaryButton>
+          <SecondaryButton icon={<Printer size={17} />} onClick={onReceiptPreview}>Receipt Preview</SecondaryButton>
           <SecondaryButton icon={<Copy size={17} />} onClick={onDuplicate}>Duplicate Sale</SecondaryButton>
           <SecondaryButton
             disabled={!isRefundEligible(transaction)}
@@ -3965,7 +4273,7 @@ function VoidFlowScreen({
   const canVoid = managerCode.trim().length >= 4 && reason && confirm;
 
   return (
-    <div className="mx-auto max-w-[860px] px-6 py-6">
+    <div className="mx-auto max-w-[860px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onCancel}>Cancel</SecondaryButton>}
         eyebrow="Manager approval"
@@ -4044,7 +4352,7 @@ function RefundRequestScreen({
   const canSubmit = isRefundEligible(transaction) && reason && managerPin.trim().length >= 4 && confirm;
 
   return (
-    <div className="mx-auto max-w-[900px] px-6 py-6">
+    <div className="mx-auto max-w-[900px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onCancel}>Cancel</SecondaryButton>}
         eyebrow="Experimental branch feature"
@@ -4075,8 +4383,8 @@ function RefundRequestScreen({
         </div>
 
         <div className="mt-5 rounded-lg border border-slate-200">
-          {transaction.items.map((item) => (
-            <div className="flex justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-refund-${item.productId}`}>
+          {transaction.items.map((item, index) => (
+            <div className="flex justify-between gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={`${transaction.id}-refund-${item.productId}-${index}`}>
               <span>
                 <span className="block font-semibold">{item.name}</span>
                 <span className="text-xs text-slate-500">{item.type} | Qty {item.quantity}</span>
@@ -4456,14 +4764,14 @@ function PurchaseSection({
       </div>
       <div className="mt-3 space-y-2">
         {items.length > 0 ? (
-          items.map((item) => (
+          items.map((item, index) => (
             <div
               className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-              key={`${item.receiptId}-${item.productId}`}
+              key={`${item.receiptId}-${item.productId}-${index}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{item.name}</span>
-                <Badge tone={item.status === "Expired" ? "red" : item.status === "Refunded" ? "violet" : item.status.startsWith("Refund") || item.status === "Upcoming Live Class" ? "amber" : "green"}>
+                <Badge tone={item.status === "Expired" ? "red" : item.status.startsWith("Refund") || item.status === "Upcoming Live Class" ? "amber" : "green"}>
                   {item.status}
                 </Badge>
               </div>
@@ -4487,6 +4795,7 @@ function DemoToolsScreen({
   transactions,
   suspendedSales,
   onBack,
+  onRefundDecision,
   onScenarioChange,
   onReset,
   onSeedTransactions,
@@ -4498,6 +4807,7 @@ function DemoToolsScreen({
   transactions: Transaction[];
   suspendedSales: SuspendedSale[];
   onBack: () => void;
+  onRefundDecision: (transaction: Transaction, decision: "approve" | "reject") => void;
   onScenarioChange: (scenario: DemoScenario) => void;
   onReset: () => void;
   onSeedTransactions: () => void;
@@ -4507,9 +4817,10 @@ function DemoToolsScreen({
 }) {
   const pendingCount = transactions.filter((transaction) => transaction.status === "Pending Payment").length;
   const voidedCount = transactions.filter((transaction) => transaction.status === "Voided").length;
+  const refundRequests = transactions.filter((transaction) => transaction.refund?.status === "Refund Requested");
 
   return (
-    <div className="mx-auto max-w-[1180px] px-6 py-6">
+    <div className="mx-auto max-w-[1180px] px-4 py-6">
       <ScreenTitle
         action={<SecondaryButton icon={<ArrowLeft size={16} />} onClick={onBack}>Back</SecondaryButton>}
         eyebrow="Settings"
@@ -4551,6 +4862,57 @@ function DemoToolsScreen({
               <SecondaryButton icon={<User size={17} />} onClick={onSeedStudents}>Seed Students</SecondaryButton>
               <SecondaryButton icon={<QrCode size={17} />} onClick={onSeedPending}>Seed Pending Payments</SecondaryButton>
               <SecondaryButton icon={<PauseCircle size={17} />} onClick={onSeedSuspended}>Seed Suspended Sales</SecondaryButton>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-white p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">Refund Approval</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Prototype-only control. Real approval may later route through Lark, then Accounting.
+                </p>
+              </div>
+              <Badge tone="amber">{refundRequests.length} requests</Badge>
+            </div>
+            <div className="mt-4 space-y-3">
+              {refundRequests.length > 0 ? (
+                refundRequests.slice(0, 8).map((transaction) => (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3" key={transaction.id}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <span>
+                        <span className="block font-mono text-sm font-semibold">{transaction.id}</span>
+                        <span className="mt-1 block text-sm text-amber-950">
+                          {transaction.student} | {money(transaction.refund?.amount ?? transaction.total)}
+                        </span>
+                        <span className="mt-1 block text-xs text-amber-900">
+                          {transaction.refund?.reason}
+                        </span>
+                      </span>
+                      <span className="flex flex-wrap gap-2">
+                        <PrimaryButton
+                          className="min-h-9 bg-emerald-600 px-3 hover:bg-emerald-700"
+                          icon={<CheckCircle2 size={15} />}
+                          onClick={() => onRefundDecision(transaction, "approve")}
+                        >
+                          Approve
+                        </PrimaryButton>
+                        <SecondaryButton
+                          className="min-h-9 px-3"
+                          icon={<X size={15} />}
+                          onClick={() => onRefundDecision(transaction, "reject")}
+                        >
+                          Reject
+                        </SecondaryButton>
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">
+                  No refund requests waiting for demo approval.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -4600,6 +4962,7 @@ export default function App() {
   const [saleNotice, setSaleNotice] = useState("");
   const [lastReceipt, setLastReceipt] = useState("RC-260706-0189");
   const [lastTotal, setLastTotal] = useState(0);
+  const [receiptBackScreen, setReceiptBackScreen] = useState<Screen>("success");
   const [demoScenario, setDemoScenario] = useState<DemoScenario>("Normal Day");
   const pendingPayments = transactionHistory.filter((transaction) => transaction.status === "Pending Payment");
   const activePromotions = eligiblePromotions(activeStudent, cart);
@@ -4858,11 +5221,12 @@ export default function App() {
   function submitRefundRequest(transaction: Transaction, reason: string, note: string, managerPin: string) {
     if (!isRefundEligible(transaction)) return;
     const requestedAt = "6 Jul 2026, 14:42";
-    const refunded: Transaction = {
+    const refundRequestedTransaction: Transaction = {
       ...transaction,
       status: "Refund Requested",
       refund: {
         status: "Refund Requested",
+        originalStatus: transaction.status as CompletedTransactionStatus,
         reason,
         note: note.trim(),
         requestedBy: staffName,
@@ -4878,37 +5242,39 @@ export default function App() {
         ],
       },
     };
-    setSelectedTransaction(refunded);
+    setSelectedTransaction(refundRequestedTransaction);
     setTransactionHistory((current) =>
-      current.map((item) => (item.id === transaction.id ? refunded : item)),
+      current.map((item) => (item.id === transaction.id ? refundRequestedTransaction : item)),
     );
     setSaleNotice(`Refund requested for ${transaction.id}.`);
     setScreen("transaction-detail");
   }
 
-  function progressRefund(transaction: Transaction) {
-    if (!transaction.refund) return;
-    const nextStatus =
-      transaction.refund.status === "Refund Requested"
-        ? "Refund Approved"
-        : transaction.refund.status === "Refund Approved"
-          ? "Refund Processing"
-          : transaction.refund.status === "Refund Processing"
-            ? "Refunded"
-            : null;
-    if (!nextStatus) return;
+  function decideRefund(transaction: Transaction, decision: "approve" | "reject") {
+    if (!transaction.refund || transaction.refund.status !== "Refund Requested") return;
+    const nextStatus: RefundStatus =
+      decision === "approve" ? "Refund Approved / Sent to Accounting" : "Refund Rejected";
+    const decisionAt = decision === "approve" ? "6 Jul 2026, 14:49" : "6 Jul 2026, 14:51";
+    const decisionNote =
+      decision === "approve"
+        ? "Refund request approved and handed over to Accounting."
+        : "Refund request rejected in demo approval control.";
     const updated: Transaction = {
       ...transaction,
-      status: nextStatus,
+      status: decision === "approve" ? "Refund Approved / Sent to Accounting" : transaction.refund.originalStatus,
       refund: {
         ...transaction.refund,
         status: nextStatus,
+        decisionBy: "Demo Approver",
+        decisionAt,
+        decisionNote,
         activity: [
           ...transaction.refund.activity,
           {
             status: nextStatus,
-            time: nextStatus === "Refunded" ? "6 Jul 2026, 15:10" : nextStatus === "Refund Processing" ? "6 Jul 2026, 14:58" : "6 Jul 2026, 14:49",
-            staff: staffName,
+            time: decisionAt,
+            staff: "Demo Approver",
+            note: decisionNote,
           },
         ],
       },
@@ -5098,7 +5464,10 @@ export default function App() {
             total={lastTotal}
             onNewSale={startNewSale}
             onProfile={() => setScreen("student-profile")}
-            onReceiptPreview={() => setScreen("receipt-preview")}
+            onReceiptPreview={() => {
+              setReceiptBackScreen("success");
+              setScreen("receipt-preview");
+            }}
           />
         );
       case "receipt-preview":
@@ -5108,8 +5477,10 @@ export default function App() {
             cart={cart}
             deliveryAddress={selectedDeliveryAddress}
             receiptId={lastReceipt}
+            transaction={selectedTransaction}
             total={lastTotal}
-            onBack={() => setScreen("success")}
+            onBack={() => setScreen(receiptBackScreen)}
+            onStartNewSale={startNewSale}
           />
         );
       case "suspended-sales":
@@ -5147,11 +5518,23 @@ export default function App() {
       case "transactions":
         return (
           <TransactionsScreen
+            suspendedSales={suspendedSales}
             transactions={transactionHistory}
             onBack={() => setScreen("home")}
             onOpen={(transaction) => {
               setSelectedTransaction(transaction);
               setScreen("transaction-detail");
+            }}
+            onReceiptPreview={(transaction) => {
+              setSelectedTransaction(transaction);
+              setLastReceipt(transaction.id);
+              setLastTotal(transaction.total);
+              setReceiptBackScreen("transactions");
+              setScreen("receipt-preview");
+            }}
+            onOpenSuspended={(sale) => {
+              setSelectedSuspendedSale(sale);
+              setScreen("suspended-detail");
             }}
           />
         );
@@ -5161,8 +5544,13 @@ export default function App() {
             transaction={selectedTransaction}
             onBack={() => setScreen("transactions")}
             onDuplicate={() => duplicateSale(selectedTransaction)}
-            onProgressRefund={progressRefund}
             onRefund={() => setScreen("refund-request")}
+            onReceiptPreview={() => {
+              setLastReceipt(selectedTransaction.id);
+              setLastTotal(selectedTransaction.total);
+              setReceiptBackScreen("transaction-detail");
+              setScreen("receipt-preview");
+            }}
             onVoid={() => setScreen("void-flow")}
           />
         );
@@ -5189,6 +5577,7 @@ export default function App() {
             suspendedSales={suspendedSales}
             transactions={transactionHistory}
             onBack={() => setScreen("home")}
+            onRefundDecision={decideRefund}
             onReset={resetDemoData}
             onScenarioChange={applyDemoScenario}
             onSeedPending={seedPendingPayments}

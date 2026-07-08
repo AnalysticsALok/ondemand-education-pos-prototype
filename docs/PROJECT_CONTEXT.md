@@ -47,8 +47,11 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - Void is same-day cancellation or mistake correction.
   - Refund is a post-payment customer refund request.
 - Experimental refund is available only for completed transactions in prototype terms: `Paid` and `SMS sent`.
-- Experimental refund is not available for Pending Payment, Voided, Cancelled, Refund Requested, Refund Approved, Refund Processing, or Refunded transactions.
-- Experimental refund does not support partial refund, item-level refund, exchange, store credit, refund to a different payment method, or backend integration.
+- Experimental refund is not available for Pending Payment, Voided, Cancelled, Refund Requested, Refund Approved / Sent to Accounting, or transactions with an existing refund decision.
+- Experimental refund does not support partial refund, item-level refund, exchange, store credit, refund to a different payment method, actual accounting completion, backend integration, or Lark integration.
+- Refund approval is mocked in Demo Tools.
+- Real Lark approval integration is future scope.
+- Actual Accounting refund completion is outside this POS prototype.
 - Experimental dashboard branch feature is read-only and provides operational visibility for Siam Branch only.
 - Experimental dashboard metrics are calculated from current mock/live prototype state and do not use a backend, database, or BI service.
 - Current stakeholder demo data is scoped to Siam Branch only.
@@ -59,16 +62,16 @@ Secondary stakeholders include branch managers, product owners, operations teams
 
 - Next.js clickable prototype scaffold.
 - Local development server support.
-- Home screen with current branch, staff name, current time, cart count, suspended sales badge, pending payments badge, suspended sales shortcut, pending payments shortcut, and recent transaction shortcut.
+- Home screen with current branch, staff name, current time, cart count, suspended sales badge, pending payments badge, suspended sales shortcut, pending payments shortcut, and Transactions shortcut.
 - Header and Home include a Dashboard shortcut for Siam Branch stakeholder demo.
 - Experimental Siam Branch Dashboard shows:
   - Today's Sales revenue, completed transaction count, and average order value
-  - Transaction Status Summary for completed, pending payment, suspended, voided, refund requested, and refunded records
+  - Transaction Status Summary for completed, pending payment, suspended, voided, refund requested, approved/sent to Accounting, and rejected records
   - Pending Actions for pending payments, suspended sales, refund requests, and SMS failed cases
   - Top Selling Products
   - Product Mix by digital course, book, e-book, and live class
   - Recent Activity for payments, refunds, suspended sales, voids, and SMS events
-  - Refund Summary for refund requested count, refunded count, total refunded amount, and latest refund request
+  - Refund Summary for refund requested count, approved/sent to Accounting count, rejected count, and latest refund request
 - Header branch selector remembers current branch during the session.
 - Two primary start-sale actions:
   - Existing Student
@@ -174,15 +177,32 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - Receipt Preview action
   - Start New Sale action
 - Receipt Preview screen matching printed receipt layout.
+- Receipt Preview is available from Payment Success and Transaction Detail.
+- Receipt Preview includes a dedicated printable receipt area.
+- Print Receipt uses browser print behavior with `window.print()`.
+- Print-specific CSS hides the POS header, navigation, buttons, dashboard, cart, and non-receipt UI so only the receipt prints.
 - Receipt Preview actions:
   - Print Receipt
+  - Back to Transaction
+  - Start New Sale where applicable
   - Download PDF mock
   - Email Receipt mock
   - Send SMS Again
-- Recent Transactions screen with transaction history.
+- Transactions screen with transaction history.
+- Transactions screen shows all transaction history, not only recent transactions.
+- Transactions screen filter chips:
+  - All
+  - Completed
+  - Pending Payment
+  - Suspended
+  - Voided
+  - Refund Requested
+  - Sent to Accounting
+  - Refund Rejected
+- Transactions search supports receipt, student, phone, and product.
 - Transaction list actions:
   - View
-  - Reprint
+  - Receipt Preview
   - Void
 - Transaction Detail screen.
 - Experimental full-order refund request flow from Transaction Detail.
@@ -197,13 +217,15 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - Other
 - Experimental refund status progression:
   - Refund Requested
-  - Refund Approved
-  - Refund Processing
-  - Refunded
-- Transaction Detail refund section shows refund status, reason, note, requested staff, manager approval, requested date/time, refund amount, and refund activity.
-- Recent Transactions shows refund status badges.
-- Student Profile timeline shows refund requested, refund approved, refund processing, and refunded events.
-- Refunded purchased items remain in Student Profile and show status `Refunded`.
+  - Refund Approved / Sent to Accounting
+  - Refund Rejected
+- Demo Tools includes a prototype-only Refund Approval section where refund requests can be approved/sent to Accounting or rejected.
+- Approved refund requests show: "Refund request approved and handed over to Accounting."
+- Rejected refund requests restore the transaction to its original paid/completed status while keeping refund audit details.
+- Transaction Detail refund section shows refund status, reason, note, requested staff, manager approval, requested date/time, refund amount, demo approver, approval/rejection time, approval/rejection note, and refund activity.
+- Transactions shows refund status badges.
+- Student Profile timeline shows refund requested, refund approved and sent to Accounting, and refund rejected events.
+- Siam Branch demo data includes seeded refund cases across Refund Requested, Refund Approved / Sent to Accounting, and Refund Rejected.
 - Void Flow screen requiring:
   - Manager approval code
   - Void reason
@@ -286,7 +308,7 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - Current shift and staff name
 - Transaction history is live prototype state:
   - Successful payment creates a transaction object.
-  - New transaction appears at the top of Recent Transactions.
+  - New transaction appears at the top of Transactions.
   - Transaction detail shows exact purchased items.
   - Pending Payment transactions remain available until completed or cancelled.
   - Delivery address appears in transaction detail for book deliveries.
@@ -295,10 +317,11 @@ Secondary stakeholders include branch managers, product owners, operations teams
   - New Student / Walk-in purchase history can be checked from Payment Success using View Profile.
   - Void changes transaction status to Voided.
   - Refund request changes transaction status to Refund Requested.
-  - Refund progression updates the same transaction through refund statuses without removing history.
+  - Refund approval updates the same transaction to Refund Approved / Sent to Accounting without marking it actually refunded.
+  - Refund rejection restores the transaction status to its original paid/completed state and keeps refund audit metadata.
   - Initial mock transactions remain available.
 - Loading states for student search, product loading, global command search, transaction history, pending payments, and payment processing.
-- Meaningful empty states for no suspended sales, no pending payments, no recent transactions, no search results, and no recommendations.
+- Meaningful empty states for no suspended sales, no pending payments, no transactions, no search results, and no recommendations.
 - Smart defaults during the session:
   - Last payment method
   - Last catalog filter
@@ -417,12 +440,12 @@ Secondary stakeholders include branch managers, product owners, operations teams
 3. Profile groups purchased items into Active Digital Courses, Purchased Books, E-books, and Live Classes.
 4. Each purchased item shows product name, type, purchase date, receipt, and status.
 5. Purchase History shows related transactions and transaction status.
-6. After payment, the new transaction appears in Recent Transactions and in the student's profile.
+6. After payment, the new transaction appears in Transactions and in the student's profile.
 7. For New Student / Walk-in, Payment Success provides View Profile so SMS activation and purchased items can be checked immediately.
 
 ## Duplicate Sale Flow
 
-1. Staff opens Recent Transactions.
+1. Staff opens Transactions.
 2. Staff opens a transaction detail.
 3. Staff selects Duplicate Sale.
 4. System copies purchased products into a new cart.
@@ -478,9 +501,9 @@ Secondary stakeholders include branch managers, product owners, operations teams
 3. System shows a printed-receipt style preview.
 4. Staff can print, download PDF mock, email receipt mock, or send SMS again.
 
-## Recent Transaction Flow
+## Transaction History Flow
 
-1. Staff opens Recent Transactions from Home or the global header.
+1. Staff opens Transactions from Home or the global header.
 2. Staff reviews transaction list.
 3. Staff can view transaction detail.
 4. Staff can reprint receipt.
@@ -767,7 +790,7 @@ Reason: If a customer returns later and staff search the student, the unfinished
 
 Decision: Student Profile purchase sections are derived from live transaction history instead of a separate hard-coded purchase list.
 
-Reason: This keeps Recent Transactions and Student Profile consistent when a prototype payment creates a new transaction.
+Reason: This keeps Transactions and Student Profile consistent when a prototype payment creates a new transaction.
 
 ## Add Duplicate Sale
 

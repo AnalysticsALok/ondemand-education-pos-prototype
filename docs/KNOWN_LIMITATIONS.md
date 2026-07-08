@@ -8,11 +8,13 @@
 - Tax behavior is mocked and should be confirmed with finance/accounting.
 - Multi-student cart assignment is not implemented.
 - Payment failure and retry states are not implemented.
-- Receipt PDF download and email receipt are mock actions with visible confirmation feedback.
+- Receipt printing uses browser print behavior and print CSS, but PDF download and email receipt remain mock actions with visible confirmation feedback.
+- Receipt preview keeps multi-BU purchases on one receipt for demo purposes and does not split receipts by BU.
 - SMS resend is represented as an action but does not simulate limits or failure.
 - Full-order refund is implemented as an experimental branch feature only and is not approved for main/production.
-- Refund is mock state only and has no backend, payment gateway, settlement, accounting, or audit-system integration.
-- Refund does not support partial refund, item-level refund, exchange, store credit, or refund to a different payment method.
+- Refund is mock state only and has no backend, payment gateway, settlement, Accounting, Lark, or audit-system integration.
+- Refund does not support partial refund, item-level refund, exchange, store credit, refund to a different payment method, refund processing, or refunded completion.
+- Approved refund requests are only marked as sent to Accounting; actual Accounting refund completion is outside this POS prototype.
 - Dashboard is implemented as an experimental read-only branch feature only and is not approved for main/production.
 - Dashboard metrics are calculated from in-memory mock/live prototype state and should not be treated as accounting, BI, or operational reporting truth.
 - Staff authentication and role permissions are not implemented.
@@ -26,8 +28,8 @@
 
 ## UX Limitations
 
-- Most responsive visual inspection has focused on the Home screen.
-- Catalog, delivery, pending payments, suspended sales, and transaction tables should receive more tablet-specific QA.
+- Mobile responsiveness has been improved for the prototype shell, header, dashboard, and cart stacking, but additional device QA is still recommended.
+- Catalog, delivery, pending payments, suspended sales, transaction tables, transaction detail, and refund approval controls should receive more tablet-specific QA.
 - Experimental dashboard should receive tablet and small-laptop visual QA before stakeholder presentation.
 - Icon-only actions have labels and tooltips but should receive accessibility testing.
 - Global search supports `Cmd K` / `Ctrl K`; additional keyboard shortcuts are not implemented.

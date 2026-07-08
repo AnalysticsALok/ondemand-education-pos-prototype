@@ -12,7 +12,7 @@
 - Added mixed-product shopping cart.
 - Added payment flow for cash, credit card, and QR payment.
 - Added payment success screen with SMS activation state.
-- Added Recent Transactions.
+- Added Transactions.
 - Added Transaction Detail.
 - Added manager-approved Void Flow.
 - Added responsive home layout.
@@ -41,7 +41,7 @@
 - Added discount reason and approval metadata in transaction detail.
 - Added branch, payment gateway, SMS, shift, and staff status indicators.
 - Converted transaction history from static mock rendering to live prototype state.
-- Fixed completed purchases so they create transaction records and appear in Recent Transactions.
+- Fixed completed purchases so they create transaction records and appear in Transactions.
 - Updated void behavior to change transaction status to `Voided` without deleting the transaction.
 
 ## Milestone 4 - Suspended Sales Queue And Student Profile Purchases
@@ -76,7 +76,7 @@
 - Added duplicate purchase warning when adding an already-owned product.
 - Expanded global search to include parent phone, product types, receipts, transactions, and suspended sales.
 - Added loading states for search, product filtering, and payment processing.
-- Added empty states for suspended sales, pending payments, recent transactions, search results, and recommendations.
+- Added empty states for suspended sales, pending payments, transactions, search results, and recommendations.
 - Added session smart defaults for last payment method, last catalog filter, and recently viewed products.
 
 ## Milestone 6 - Remaining Polish Cleanup
@@ -118,12 +118,13 @@
 - Added experimental refund branch feature for full-order refunds only.
 - Added Request Refund action on completed transaction detail records.
 - Added controlled refund request screen with receipt details, purchased items, payment method, paid amount, full refund amount, refund reason, optional note, manager PIN, and confirmation checkbox.
-- Added refund statuses: `Refund Requested`, `Refund Approved`, `Refund Processing`, and `Refunded`.
-- Added mock refund status progression from Transaction Detail.
+- Replaced refund status model with `Refund Requested`, `Refund Approved / Sent to Accounting`, and `Refund Rejected`.
+- Removed prototype support for `Refund Processing` and `Refunded`.
+- Moved refund approval/rejection to a prototype-only Refund Approval section in Demo Tools.
 - Added refund detail section with status, reason, note, requested staff, manager approval, requested date/time, refund amount, and activity log.
-- Added refund status badges in Recent Transactions.
+- Added refund status badges in Transactions.
 - Added refund events to Student Profile timeline.
-- Updated purchased item display so refunded orders remain visible with `Refunded` status.
+- Rejected refunds restore the original paid/completed transaction status while keeping the refund audit section visible.
 - Kept refund separate from Void and excluded Pending Payment, Voided, Cancelled, and already-refund-state transactions from refund requests.
 - Verified `npm run lint` and `npm run build`.
 
@@ -132,10 +133,33 @@
 - Added read-only experimental Dashboard page for Siam Branch stakeholder demo.
 - Added Dashboard shortcut in the header and Home screen.
 - Added Today's Sales widgets for revenue, completed transaction count, and average order value.
-- Added Transaction Status Summary for completed, pending payment, suspended, voided, refund requested, and refunded records.
+- Added Transaction Status Summary for completed, pending payment, suspended, voided, refund requested, approved/sent to Accounting, and rejected records.
 - Added Pending Actions widgets for pending payments, suspended sales, refund requests, and SMS failed cases.
 - Added Top Selling Products and Product Mix sections based on current completed transaction state.
-- Added Recent Activity stream for payment completed, refund requested, refunded, sale suspended, transaction voided, and SMS sent/failed events.
-- Added Refund Summary for requested count, refunded count, total refunded amount, and latest refund request.
+- Added Recent Activity stream for payment completed, refund requested, refund approved/sent to Accounting, refund rejected, sale suspended, transaction voided, and SMS sent/failed events.
+- Added Refund Summary for requested count, approved/sent to Accounting count, rejected count, and latest refund request.
 - Kept dashboard read-only with no backend, database, or BI integration.
+- Verified `npm run lint` and `npm run build`.
+
+## Milestone 11 - Mobile Responsive Cleanup
+
+- Updated header wrapping so mobile/tablet widths no longer force the full desktop navigation into a single row.
+- Made Student Banner non-sticky on mobile and sticky only on desktop/tablet widths.
+- Removed mobile fixed-height behavior from the cart rail so catalog and cart stack naturally.
+- Reduced mobile page padding and added page-level overflow protection to prevent large blank horizontal areas.
+- Kept operational tables horizontally scrollable inside their own containers.
+- Verified `npm run lint` and `npm run build`.
+
+## Milestone 12 - Experimental Refund Completion Polish
+
+- Renamed `Recent` navigation and page language to `Transactions`.
+- Added deterministic Siam Branch refund demo cases across Refund Requested, Refund Approved / Sent to Accounting, and Refund Rejected.
+- Added Transactions filter chips for All, Completed, Pending Payment, Suspended, Voided, Refund Requested, Sent to Accounting, and Refund Rejected.
+- Kept Transactions search focused on receipt, student, phone, and product.
+- Added Suspended filter support inside Transactions for operational review.
+- Improved Receipt Preview with a dedicated printable receipt area.
+- Added browser print behavior with `window.print()`.
+- Added print CSS so only the receipt appears in printed output.
+- Added Transaction Detail access to Receipt Preview.
+- Expanded receipt content with branch, receipt number, date/time, staff, student, phone, items, product type, BU/product group, quantity, unit price, discount, totals, payment method/status, delivery information, SMS activation note, and refund status.
 - Verified `npm run lint` and `npm run build`.
